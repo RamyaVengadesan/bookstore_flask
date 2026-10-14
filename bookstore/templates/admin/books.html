@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import admin_nav, csrf %}
+{% block title %}Books · Admin{% endblock %}
+{% block content %}
+<h1>Books</h1>{{ admin_nav('books') }}
+<div class="page-head">
+  <form method="get" class="coupon-form" style="max-width:380px"><input type="search" name="q" value="{{ q }}" placeholder="Search title, author or ISBN"><button class="btn btn-sm">Search</button></form>
+  <a class="btn" href="{{ url_for('admin.book_new') }}">Add a book</a>
+</div>
+<div class="table-wrap"><table class="data">
+  <thead><tr><th>Title</th><th>Department</th><th class="num">Price</th><th>Stock</th><th class="num">Sold</th><th></th></tr></thead>
+  <tbody>
+  {% for b in books %}
+    <tr><td><a href="{{ url_for('shop.book', book_id=b.id) }}"><b>{{ b.name }}</b></a><div class="small muted">{{ b.author }}</div></td>
+      <td>{{ b.category_name }}</td><td class="num">{{ b.price|money }}</td>
+      <td><form method="post" action="{{ url_for('admin.book_stock', book_id=b.id) }}" class="inline-stock">{{ csrf() }}<input type="number" min="0" name="stock" value="{{ b.stock }}" aria-label="Stock for {{ b.name }}"><button class="btn btn-ghost btn-sm">Set</button></form></td>
+      <td class="num">{{ b.sold_count }}</td>
+      <td><div class="row-actions"><a class="btn btn-ghost btn-sm" href="{{ url_for('admin.book_edit', book_id=b.id) }}">Edit</a>
+        <form method="post" action="{{ url_for('admin.book_delete', book_id=b.id) }}" data-confirm="Delete “{{ b.name }}”? This can't be undone.">{{ csrf() }}<button class="btn btn-danger btn-sm">Delete</button></form></div></td></tr>
+  {% else %}<tr><td colspan="6" class="muted">No books match your search.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endblock %}

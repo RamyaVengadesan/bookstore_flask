@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import admin_nav, csrf %}
+{% block title %}Categories · Admin{% endblock %}
+{% block content %}
+<h1>Categories</h1>{{ admin_nav('cats') }}
+<form method="post" class="panel" style="margin-bottom:18px;max-width:520px">{{ csrf() }}
+  <h3>Add a department</h3>
+  <div class="coupon-form"><input name="name" placeholder="e.g. Mechanical Engineering" required aria-label="Department name"><button class="btn btn-sm">Add</button></div>
+</form>
+<div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>URL name</th><th class="num">Books</th></tr></thead>
+  <tbody>{% for c in cats %}<tr><td><b>{{ c.name }}</b></td><td>{{ c.slug }}</td><td class="num">{{ c.n }}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import book_card, pagination %}
+{% block title %}{{ 'Search: ' ~ q if q else 'All books' }} · PU Book Store{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{% if q %}Results for “{{ q }}”{% elif cat %}{{ (nav_categories|selectattr('slug','equalto',cat)|first).name if (nav_categories|selectattr('slug','equalto',cat)|list) else 'Books' }}{% else %}All books{% endif %}</h1>
+    <span class="muted">{{ total }} {{ 'book' if total == 1 else 'books' }}</span>
+  </div>
+  <button class="btn btn-ghost btn-sm filter-toggle" type="button">Filters</button>
+</div>
+
+<div class="catalogue">
+  <form class="filters" method="get" id="filter-form">
+    {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <div class="group">
+      <h3>Department</h3>
+      <a class="opt {{ 'active' if not cat }}" href="{{ url_for('shop.catalogue', q=q or None, sort=sort) }}">All books <span class="n">{{ counts.values()|sum }}</span></a>
+      {% for c in nav_categories %}
+        <a class="opt {{ 'active' if cat == c.slug }}" href="{{ url_for('shop.catalogue', category=c.slug, q=q or None, sort=sort) }}">{{ c.name }} <span class="n">{{ counts.get(c.slug, 0) }}</span></a>
+      {% endfor %}
+    </div>
+    {% if cat %}<input type="hidden" name="category" value="{{ cat }}">{% endif %}
+    <div class="group">
+      <h3>Price (₹)</h3>
+      <div class="price-inputs">
+        <input type="number" name="min_price" min="0" placeholder="Min" value="{{ min_price }}" aria-label="Minimum price">
+        <span>to</span>
+        <input type="number" name="max_price" min="0" placeholder="Max" value="{{ max_price }}" aria-label="Maximum price">
+      </div>
+    </div>
+    <div class="group">
+      <label class="check"><input type="checkbox" name="in_stock" value="1" {{ 'checked' if in_stock }} data-autosubmit> In stock only</label>
+    </div>
+    <button class="btn btn-block btn-sm">Apply filters</button>
+  </form>
+
+  <section>
+    <form class="toolbar" method="get">
+      {% for k, v in base_args.items() if k != 'sort' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+      <div class="chips">
+        {% if q %}<span class="chip">Search: {{ q }}</span>{% endif %}
+        {% if in_stock %}<span class="chip">In stock</span>{% endif %}
+        {% if min_price or max_price %}<span class="chip">₹{{ min_price or 0 }} – {{ max_price or 'any' }}</span>{% endif %}
+        {% if q or in_stock or min_price or max_price or cat %}<a class="small" href="{{ url_for('shop.catalogue') }}">Clear all</a>{% endif %}
+      </div>
+      <label class="check small">Sort by
+        <select name="sort" data-autosubmit>
+          {% for key, label in [('relevance','Best selling'),('rating','Top rated'),('price_asc','Price: low to high'),('price_desc','Price: high to low'),('newest','Newest'),('name','Title A–Z')] %}
+            <option value="{{ key }}" {{ 'selected' if sort == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </form>
+
+    {% if books %}
+      <div class="grid">{% for b in books %}{{ book_card(b, wished) }}{% endfor %}</div>
+      {{ pagination(page, pages, 'shop.catalogue', base_args) }}
+    {% else %}
+      <div class="empty">
+        <h2>No books match</h2>
+        <p class="muted">Try a shorter search, a different department, or remove the price filter.</p>
+        <a class="btn" href="{{ url_for('shop.catalogue') }}">Show all books</a>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

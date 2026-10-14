@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import book_card %}
+{% block title %}Wishlist · PU Book Store{% endblock %}
+{% block content %}
+<h1>Your wishlist</h1>
+{% if books %}<div class="grid" data-wishlist-page>{% for b in books %}{{ book_card(b, wished) }}{% endfor %}</div>
+{% else %}<div class="empty"><h2>Nothing saved yet</h2><p class="muted">Tap the heart on any book to keep it here for later.</p><a class="btn" href="{{ url_for('shop.catalogue') }}">Browse books</a></div>{% endif %}
+{% endblock %}

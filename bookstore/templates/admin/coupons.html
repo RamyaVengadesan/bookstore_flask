@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import admin_nav, csrf %}
+{% block title %}Coupons · Admin{% endblock %}
+{% block content %}
+<h1>Coupons</h1>{{ admin_nav('coupons') }}
+<form method="post" class="panel" style="margin-bottom:18px">{{ csrf() }}
+  <h3>New coupon</h3>
+  <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr))">
+    <div class="field"><label for="code">Code</label><input id="code" name="code" required maxlength="20" placeholder="DIWALI15"></div>
+    <div class="field"><label for="percent">Discount %</label><input id="percent" name="percent" type="number" min="1" max="90" required></div>
+    <div class="field"><label for="min_amount">Minimum cart (₹)</label><input id="min_amount" name="min_amount" type="number" min="0" value="0"></div>
+    <div class="field"><label for="max_discount">Max discount (₹)</label><input id="max_discount" name="max_discount" type="number" min="0"></div>
+    <div class="field"><label for="expires_on">Expires on</label><input id="expires_on" name="expires_on" type="date"></div>
+  </div>
+  <button class="btn">Create coupon</button>
+</form>
+<div class="table-wrap"><table class="data">
+  <thead><tr><th>Code</th><th>Discount</th><th>Minimum cart</th><th>Cap</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+  <tbody>{% for c in coupons %}<tr><td><b>{{ c.code }}</b></td><td>{{ c.percent }}%</td><td>{{ c.min_amount|money }}</td><td>{{ c.max_discount|money if c.max_discount else 'None' }}</td><td>{{ c.expires_on or 'Never' }}</td>
+    <td>{{ 'Active' if c.active else 'Paused' }}</td>
+    <td><div class="row-actions">
+      <form method="post" action="{{ url_for('admin.coupon_toggle', cid=c.id) }}">{{ csrf() }}<button class="btn btn-ghost btn-sm">{{ 'Pause' if c.active else 'Activate' }}</button></form>
+      <form method="post" action="{{ url_for('admin.coupon_delete', cid=c.id) }}" data-confirm="Delete coupon {{ c.code }}?">{{ csrf() }}<button class="btn btn-danger btn-sm">Delete</button></form></div></td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

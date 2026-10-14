@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import admin_nav %}
+{% block title %}Customers · Admin{% endblock %}
+{% block content %}
+<h1>Customers</h1>{{ admin_nav('users') }}
+<div class="table-wrap"><table class="data">
+  <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Joined</th><th class="num">Orders</th><th class="num">Spent</th></tr></thead>
+  <tbody>{% for u in users %}<tr><td><b>{{ u.fullname }}</b> {% if u.is_admin %}<span class="chip">Admin</span>{% endif %}</td><td>@{{ u.username }}</td><td>{{ u.email }}</td><td>{{ u.created_at|dt('%d %b %Y') }}</td><td class="num">{{ u.orders }}</td><td class="num">{{ u.spent|money }}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Invoice {{ order_ref(o.id) }}</title>
+<style>
+  body{font:15px/1.5 system-ui,sans-serif;color:#111;max-width:760px;margin:30px auto;padding:0 20px}
+  h1{margin:0}.top{display:flex;justify-content:space-between;border-bottom:3px solid #1f2a5a;padding-bottom:12px;margin-bottom:20px}
+  table{width:100%;border-collapse:collapse;margin:18px 0}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}th:last-child,td:last-child,th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3){text-align:right}
+  .tot td{border:0;padding:3px 8px}.tot td:first-child{text-align:right}.grand td{font-weight:700;font-size:1.1em;border-top:2px solid #111}
+  button{padding:8px 16px;margin-bottom:16px}@media print{button{display:none}}
+</style></head><body>
+<button onclick="window.print()">Print invoice</button>
+<div class="top"><div><h1>PU Book Store</h1>Tax invoice</div><div style="text-align:right"><b>{{ order_ref(o.id) }}</b><br>{{ o.created_at|dt('%d %b %Y') }}</div></div>
+<p><b>Billed and shipped to</b><br>{{ o.ship_name }}<br>{{ o.ship_address }}<br>Phone {{ o.ship_phone }}<br>{{ customer.email }}</p>
+<table><thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Amount</th></tr></thead><tbody>
+{% for i in items %}<tr><td>{{ i.title }}<br><small>{{ i.author }}</small></td><td>{{ i.price|money }}</td><td>{{ i.qty }}</td><td>{{ (i.price*i.qty)|money }}</td></tr>{% endfor %}
+</tbody></table>
+<table class="tot">
+<tr><td colspan="3">Subtotal</td><td style="text-align:right">{{ o.subtotal|money }}</td></tr>
+{% if o.discount %}<tr><td colspan="3">Coupon {{ o.coupon_code }}</td><td style="text-align:right">−{{ o.discount|money }}</td></tr>{% endif %}
+<tr><td colspan="3">Delivery</td><td style="text-align:right">{{ 'Free' if o.shipping_fee == 0 else o.shipping_fee|money }}</td></tr>
+<tr class="grand"><td colspan="3">Total</td><td style="text-align:right">{{ o.total|money }}</td></tr></table>
+<p>Payment: {{ o.payment_method }} ({{ o.payment_status }}). Order status: {{ o.status }}.</p>
+<p><small>This is a demo store; this invoice is not a legal tax document.</small></p>
+</body></html>

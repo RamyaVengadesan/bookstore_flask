@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import admin_nav, csrf, badge %}
+{% block title %}{{ order_ref(o.id) }} · Admin{% endblock %}
+{% block content %}
+<h1>Order {{ order_ref(o.id) }} {{ badge(o.status) }}</h1>{{ admin_nav('orders') }}
+<div class="two-col">
+  <section class="panel">
+    <h3>Items</h3>
+    {% for i in items %}<div class="sum-row"><span>{{ i.title }} <span class="muted">× {{ i.qty }}</span></span><span>{{ (i.price * i.qty)|money }}</span></div>{% endfor %}
+    <div class="sum-row" style="border-top:1px solid var(--line)"><span>Subtotal</span><span>{{ o.subtotal|money }}</span></div>
+    {% if o.discount %}<div class="sum-row"><span>Coupon {{ o.coupon_code }}</span><span>−{{ o.discount|money }}</span></div>{% endif %}
+    <div class="sum-row"><span>Delivery</span><span>{{ o.shipping_fee|money }}</span></div>
+    <div class="sum-row total"><span>Total</span><span>{{ o.total|money }}</span></div>
+    <h3 style="margin-top:22px">Activity</h3>
+    <ul class="events">{% for e in events|reverse %}<li><b>{{ e.status }}</b><span class="muted small">{{ e.created_at|dt }}{{ ' · ' ~ e.note if e.note }}</span></li>{% endfor %}</ul>
+  </section>
+  <aside>
+    <div class="panel"><h3>Update status</h3>
+      {% if o.status == 'Cancelled' %}<p class="muted">This order was cancelled and can't be reopened.</p>
+      {% else %}
+      <form method="post">{{ csrf() }}
+        <div class="field"><label for="status">New status</label><select id="status" name="status">{% for s in statuses %}<option {{ 'selected' if s == o.status }}>{{ s }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="note">Note for the customer (optional)</label><input id="note" name="note" maxlength="200" placeholder="e.g. Courier: Delhivery #1234"></div>
+        <button class="btn btn-block">Update order</button>
+        <p class="hint small muted" style="margin-top:8px">Cancelling returns the books to stock.</p>
+      </form>{% endif %}</div>
+    <div class="panel"><h3>Customer</h3><p style="margin:0">{{ o.fullname }}<br><span class="muted small">{{ o.email }}</span></p></div>
+    <div class="panel"><h3>Ship to</h3><p style="margin:0"><b>{{ o.ship_name }}</b><br>{{ o.ship_address }}<br><span class="muted small">Phone {{ o.ship_phone }}</span></p>
+      <p class="small" style="margin:10px 0 0">{{ o.payment_method }} · {{ badge(o.payment_status) }}</p></div>
+  </aside>
+</div>
+{% endblock %}

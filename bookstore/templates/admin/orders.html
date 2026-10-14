@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import admin_nav, badge %}
+{% block title %}Orders · Admin{% endblock %}
+{% block content %}
+<h1>Orders</h1>{{ admin_nav('orders') }}
+<form method="get" class="page-head">
+  <div class="coupon-form" style="max-width:520px">
+    <input type="search" name="q" value="{{ q }}" placeholder="Customer or order number">
+    <select name="status" data-autosubmit style="width:auto"><option value="">All statuses</option>{% for s in statuses %}<option {{ 'selected' if s == status }}>{{ s }}</option>{% endfor %}</select>
+    <button class="btn btn-sm">Filter</button>
+  </div>
+</form>
+<div class="table-wrap"><table class="data">
+  <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Status</th><th>Payment</th><th class="num">Total</th></tr></thead>
+  <tbody>{% for o in orders %}
+    <tr><td><a href="{{ url_for('admin.order', order_id=o.id) }}"><b>{{ order_ref(o.id) }}</b></a></td><td>{{ o.fullname }}<div class="small muted">@{{ o.username }}</div></td>
+      <td>{{ o.created_at|dt('%d %b, %I:%M %p') }}</td><td>{{ badge(o.status) }}</td><td>{{ badge(o.payment_status) }} <span class="small muted">{{ o.payment_method }}</span></td><td class="num">{{ o.total|money }}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">No orders found.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

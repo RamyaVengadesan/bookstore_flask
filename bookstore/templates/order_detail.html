@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import csrf, cover, badge %}
+{% block title %}Order {{ order_ref(o.id) }} · PU Book Store{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Order {{ order_ref(o.id) }}</h1><span class="muted">Placed {{ o.created_at|dt }}</span></div>
+  <div class="no-print row-actions">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('orders.invoice', order_id=o.id) }}" target="_blank" rel="noopener">View invoice</a>
+    {% if can_cancel and o.user_id == g.user.id %}
+    <form method="post" action="{{ url_for('orders.cancel', order_id=o.id) }}" data-confirm="Cancel this order?">{{ csrf() }}<button class="btn btn-danger btn-sm">Cancel order</button></form>{% endif %}
+  </div>
+</div>
+
+<section class="panel">
+  {% if o.status == 'Cancelled' %}
+    <p>{{ badge('Cancelled') }} This order was cancelled. {% if o.payment_status == 'Refunded' %}Your payment is being refunded.{% endif %}</p>
+  {% else %}
+    {% set cur = flow.index(o.status) %}
+    <ol class="timeline">{% for s in flow %}<li class="{{ 'done' if loop.index0 <= cur }} {{ 'now' if loop.index0 == cur }}">{{ s }}</li>{% endfor %}</ol>
+  {% endif %}
+</section>
+
+<div class="two-col" style="margin-top:18px">
+  <section class="panel">
+    <h3>Items</h3>
+    {% for i in items %}
+    <div class="line">
+      <div class="cover cc{{ loop.index % 6 }}">{% if i.image %}<img src="{{ i.image }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>
+      <div>{% if i.book_id %}<a class="line-title" href="{{ url_for('shop.book', book_id=i.book_id) }}">{{ i.title }}</a>{% else %}<span class="line-title">{{ i.title }}</span>{% endif %}
+        <div class="small muted">{{ i.author }} · {{ i.price|money }} × {{ i.qty }}</div></div>
+      <div class="line-total">{{ (i.price * i.qty)|money }}</div>
+    </div>
+    {% endfor %}
+    <h3 style="margin-top:22px">Activity</h3>
+    <ul class="events">{% for e in events|reverse %}<li><b>{{ e.status }}</b><span class="muted small">{{ e.created_at|dt }}{{ ' · ' ~ e.note if e.note }}</span></li>{% endfor %}</ul>
+  </section>
+  <aside>
+    <div class="panel">
+      <h3>Payment</h3>
+      <div class="sum-row"><span>Subtotal</span><span>{{ o.subtotal|money }}</span></div>
+      {% if o.discount %}<div class="sum-row"><span>Coupon {{ o.coupon_code }}</span><span class="save">−{{ o.discount|money }}</span></div>{% endif %}
+      <div class="sum-row"><span>Delivery</span><span>{{ 'FREE' if o.shipping_fee == 0 else o.shipping_fee|money }}</span></div>
+      <div class="sum-row total"><span>Total</span><span>{{ o.total|money }}</span></div>
+      <p class="small muted" style="margin:10px 0 0">{{ o.payment_method }} · {{ badge(o.payment_status) }}</p>
+    </div>
+    <div class="panel"><h3>Delivering to</h3><p style="margin:0"><b>{{ o.ship_name }}</b><br>{{ o.ship_address }}<br><span class="muted small">Phone {{ o.ship_phone }}</span></p></div>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} · PU Book Store{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div class="code">{{ code }}</div>
+  <h1>{{ title }}</h1>
+  {% if detail and code in (400, 403) %}<p class="muted">{{ detail }}</p>{% endif %}
+  <p><a class="btn" href="{{ url_for('shop.home') }}">Back to the store</a>
+     <a class="btn btn-ghost" href="{{ url_for('shop.catalogue') }}">Browse books</a></p>
+</div>
+{% endblock %}

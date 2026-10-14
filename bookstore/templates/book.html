@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import csrf, stars, cover, off, book_card %}
+{% block title %}{{ b.name }} · PU Book Store{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="{{ url_for('shop.home') }}">Home</a> / <a href="{{ url_for('shop.catalogue', category=b.category_slug) }}">{{ b.category_name }}</a> / {{ b.name }}</nav>
+
+<div class="book-top">
+  <div>{{ cover(b, 'lg') }}</div>
+  <div>
+    <h1>{{ b.name }}</h1>
+    <p class="muted">by <b>{{ b.author }}</b></p>
+    <p>{{ stars(b.rating, b.review_count if b.review_count else None) }}
+       {% if b.review_count %}<a class="small" href="#reviews">Read reviews</a>{% endif %}</p>
+    {% if b.description %}<p class="desc">{{ b.description }}</p>{% endif %}
+    <table class="meta-table">
+      <tr><td>Publisher</td><td>{{ b.publisher }}</td></tr>
+      <tr><td>ISBN</td><td>{{ b.isbn or '—' }}</td></tr>
+      <tr><td>Department</td><td><a href="{{ url_for('shop.catalogue', category=b.category_slug) }}">{{ b.category_name }}</a></td></tr>
+      <tr><td>Sold so far</td><td>{{ b.sold_count }} copies</td></tr>
+    </table>
+  </div>
+
+  <aside class="buy-box">
+    <div class="price-row"><span class="price">{{ b.price|money }}</span>
+      {% if b.mrp and b.mrp > b.price %}<s class="mrp">{{ b.mrp|money }}</s><span class="chip">{{ off(b)|trim }}% off</span>{% endif %}</div>
+    <p class="small muted">Free delivery above ₹500.</p>
+    {% if b.stock <= 0 %}
+      <div class="stock out">Out of stock</div>
+      <p class="small muted">Save it to your wishlist and check back soon.</p>
+    {% else %}
+      <div class="stock {{ 'low' if b.stock <= 5 else 'in' }}">{{ 'Only %d left' % b.stock if b.stock <= 5 else 'In stock' }}</div>
+      <form method="post" action="{{ url_for('cart.add', book_id=b.id) }}" data-ajax-add>
+        {{ csrf() }}
+        <div class="qty-pick"><label for="qty" style="margin:0">Quantity</label>
+          <select id="qty" name="qty">{% for i in range(1, [b.stock, 10]|min + 1) %}<option>{{ i }}</option>{% endfor %}</select></div>
+        <div class="stack">
+          <button class="btn btn-block" name="add">Add to cart</button>
+          <button class="btn btn-hl btn-block" name="buy_now" value="1">Buy now</button>
+        </div>
+      </form>
+    {% endif %}
+    <div class="stack" style="margin-top:10px">
+      <button type="button" class="btn btn-ghost btn-block wish-btn-text" id="wish-text" data-id="{{ b.id }}">{{ 'Remove from wishlist' if b.id in wished else 'Save to wishlist' }}</button>
+    </div>
+  </aside>
+</div>
+
+<section class="section" id="reviews">
+  <h2>Customer reviews</h2>
+  <div class="reviews">
+    <div>
+      <div class="avg">{{ '%.1f'|format(b.rating) if b.review_count else '—' }}</div>
+      {% if b.review_count %}{{ stars(b.rating) }}<p class="muted small">{{ b.review_count }} {{ 'review' if b.review_count == 1 else 'reviews' }}</p>{% else %}<p class="muted small">No reviews yet.</p>{% endif %}
+      {% if b.review_count %}
+      <div class="bars">{% for s in [5,4,3,2,1] %}
+        <div class="bar-row"><span>{{ s }}★</span><div class="bar-track"><i style="width: {{ (dist[s] / b.review_count * 100)|round|int }}%"></i></div><span class="muted">{{ dist[s] }}</span></div>
+      {% endfor %}</div>{% endif %}
+    </div>
+    <div>
+      {% if g.user %}
+      <form class="review-form" method="post" action="{{ url_for('shop.review', book_id=b.id) }}">
+        {{ csrf() }}
+        <h3>{{ 'Edit your review' if my_review else 'Write a review' }}</h3>
+        <div class="field"><label>Your rating</label>
+          <div class="star-input" role="radiogroup" aria-label="Rating">
+            {% for s in [5,4,3,2,1] %}
+              <input type="radio" name="rating" id="r{{ s }}" value="{{ s }}" {{ 'checked' if my_review and my_review.rating == s }} required><label for="r{{ s }}" title="{{ s }} stars">★</label>
+            {% endfor %}
+          </div></div>
+        <div class="field"><label for="rt">Headline</label><input id="rt" name="title" maxlength="100" value="{{ my_review.title if my_review else '' }}" placeholder="What stood out?"></div>
+        <div class="field"><label for="rc">Review</label><textarea id="rc" name="comment" maxlength="2000" placeholder="Was it useful for your course?">{{ my_review.comment if my_review else '' }}</textarea></div>
+        <button class="btn">{{ 'Update review' if my_review else 'Post review' }}</button>
+        {% if purchased %}<span class="verified"> Verified purchase</span>{% endif %}
+      </form>
+      {% if my_review %}
+      <form method="post" action="{{ url_for('shop.delete_review', book_id=b.id) }}" data-confirm="Delete your review?" style="margin-bottom:12px"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="link-btn small">Delete my review</button></form>
+      {% endif %}
+      {% else %}
+        <p class="review-form"><a href="{{ url_for('auth.login', next=request.path) }}">Log in</a> to review this book.</p>
+      {% endif %}
+      {% for r in reviews %}
+        <article class="review">
+          {{ stars(r.rating) }}
+          {% if r.title %}<h4>{{ r.title }}</h4>{% endif %}
+          <div class="small muted">{{ r.fullname }} · {{ r.created_at|dt('%d %b %Y') }}{% if r.user_id in verified_ids %} · <span class="verified">Verified purchase</span>{% endif %}</div>
+          {% if r.comment %}<p style="margin-top:6px">{{ r.comment }}</p>{% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if related %}
+<section class="section">
+  <h2>More in {{ b.category_name }}</h2>
+  <div class="grid">{% for r in related %}{{ book_card(r, wished) }}{% endfor %}</div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    var b = document.getElementById('wish-text');
+    if (!b) return;
+    var on = {{ 'true' if b.id in wished else 'false' }};
+    b.addEventListener('click', function () {
+      PU.post('/wishlist/toggle/' + b.dataset.id).then(function (j) {
+        if (!j.ok) return PU.toast(j.message, 'error');
+        on = j.wished; b.textContent = on ? 'Remove from wishlist' : 'Save to wishlist'; PU.toast(j.message, 'success');
+      });
+    });
+  })();
+</script>
+{% endblock %}

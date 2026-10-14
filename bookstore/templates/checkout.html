@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import csrf %}
+{% block title %}Checkout · PU Book Store{% endblock %}
+{% block content %}
+<h1>Checkout</h1>
+<form method="post" class="two-col" novalidate>
+  {{ csrf() }}
+  <div>
+    <section class="panel">
+      <h2>Delivery address</h2>
+      {% for a in addresses %}
+        <label class="choice"><input type="radio" name="address_id" value="{{ a.id }}" {{ 'checked' if (form.get('address_id') == a.id|string) or (not form and a.is_default) }}>
+          <span><b>{{ a.full_name }}</b>{{ a.line1 }}{{ ', ' ~ a.line2 if a.line2 }}, {{ a.city }}, {{ a.state }} {{ a.pincode }}<br><span class="muted small">Phone {{ a.phone }}</span></span></label>
+      {% endfor %}
+      <label class="choice"><input type="radio" name="address_id" value="new" {{ 'checked' if not addresses or form.get('address_id') == 'new' or (form and not form.get('address_id')) }}><span><b>Use a new address</b></span></label>
+      <div id="new-address" class="new-address">
+        <div class="grid-2">
+          <div class="field"><label for="full_name">Full name</label><input id="full_name" name="full_name" data-req value="{{ form.get('full_name', g.user.fullname if not addresses) }}" autocomplete="name"></div>
+          <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" data-req value="{{ form.get('phone', g.user.phone or '') }}" autocomplete="tel"></div>
+        </div>
+        <div class="field"><label for="line1">Address line 1</label><input id="line1" name="line1" data-req value="{{ form.get('line1','') }}" autocomplete="address-line1" placeholder="House no., street"></div>
+        <div class="field"><label for="line2">Address line 2 (optional)</label><input id="line2" name="line2" value="{{ form.get('line2','') }}" autocomplete="address-line2" placeholder="Area, landmark"></div>
+        <div class="grid-2">
+          <div class="field"><label for="city">City</label><input id="city" name="city" data-req value="{{ form.get('city','') }}"></div>
+          <div class="field"><label for="state">State</label><input id="state" name="state" data-req value="{{ form.get('state','') }}"></div>
+        </div>
+        <div class="field" style="max-width:220px"><label for="pincode">PIN code</label><input id="pincode" name="pincode" data-req inputmode="numeric" maxlength="6" pattern="\d{6}" value="{{ form.get('pincode','') }}"></div>
+        <label class="check"><input type="checkbox" name="save_address" value="1" checked> Save this address for next time</label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Payment</h2>
+      {% for key, label in methods.items() %}
+        <label class="choice"><input type="radio" name="payment" value="{{ key }}" {{ 'checked' if form.get('payment', 'cod') == key }}>
+          <span><b>{{ label }}</b>
+            {% if key == 'cod' %}<span class="muted small">Pay in cash when the books arrive.</span>
+            {% else %}<span class="muted small">Demo only: the order is marked paid and no card or UPI details are collected.</span>{% endif %}</span></label>
+      {% endfor %}
+    </section>
+  </div>
+
+  <aside class="panel">
+    <h3>Your order</h3>
+    {% for i in items %}
+      <div class="sum-row"><span>{{ i.name }} <span class="muted">× {{ i.qty }}</span></span><span>{{ i.line_total|money }}</span></div>
+    {% endfor %}
+    <div class="sum-row" style="border-top:1px solid var(--line);margin-top:8px;padding-top:12px"><span>Subtotal</span><span>{{ t.subtotal|money }}</span></div>
+    {% if t.discount %}<div class="sum-row"><span>Coupon {{ t.coupon.code }}</span><span class="save">−{{ t.discount|money }}</span></div>{% endif %}
+    <div class="sum-row"><span>Delivery</span><span>{{ 'FREE' if t.shipping == 0 else t.shipping|money }}</span></div>
+    <div class="sum-row total"><span>Total</span><span>{{ t.total|money }}</span></div>
+    <button class="btn btn-hl btn-block" style="margin-top:14px">Place order</button>
+    <p class="small muted" style="margin:10px 0 0"><a href="{{ url_for('cart.view') }}">Edit cart</a></p>
+  </aside>
+</form>
+{% endblock %}

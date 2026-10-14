@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import csrf %}
+{% block title %}My account · PU Book Store{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>My account</h1><span class="muted">@{{ g.user.username }} · {{ stats.orders }} orders · {{ stats.spent|money }} spent</span></div></div>
+<div class="account-grid">
+  <section class="panel">
+    <h2>Profile</h2>
+    <form method="post" action="{{ url_for('auth.update_profile') }}">{{ csrf() }}
+      <div class="field"><label for="fullname">Full name</label><input id="fullname" name="fullname" value="{{ g.user.fullname }}" required></div>
+      <div class="field"><label for="email">Email</label><input id="email" type="email" name="email" value="{{ g.user.email }}" required></div>
+      <div class="field"><label for="phone">Phone</label><input id="phone" type="tel" name="phone" value="{{ g.user.phone or '' }}"></div>
+      <button class="btn">Save profile</button>
+    </form>
+  </section>
+  <section class="panel">
+    <h2>Change password</h2>
+    <form method="post" action="{{ url_for('auth.change_password') }}">{{ csrf() }}
+      <div class="field"><label for="current">Current password</label><input id="current" type="password" name="current" required autocomplete="current-password"></div>
+      <div class="field"><label for="new">New password</label><input id="new" type="password" name="new" required minlength="8" autocomplete="new-password"></div>
+      <div class="field"><label for="confirm">Confirm new password</label><input id="confirm" type="password" name="confirm" required autocomplete="new-password"></div>
+      <button class="btn">Change password</button>
+    </form>
+  </section>
+  <section class="panel">
+    <h2>Saved addresses</h2>
+    {% for a in addresses %}
+      <div class="addr"><b>{{ a.full_name }}</b> {% if a.is_default %}<span class="chip">Default</span>{% endif %}<br>
+        {{ a.line1 }}{{ ', ' ~ a.line2 if a.line2 }}, {{ a.city }}, {{ a.state }} {{ a.pincode }}<br><span class="muted small">Phone {{ a.phone }}</span>
+        <div class="inline-forms">
+          {% if not a.is_default %}<form method="post" action="{{ url_for('auth.default_address', aid=a.id) }}">{{ csrf() }}<button class="link-btn" style="color:var(--ink)">Make default</button></form>{% endif %}
+          <form method="post" action="{{ url_for('auth.delete_address', aid=a.id) }}" data-confirm="Remove this address?">{{ csrf() }}<button class="link-btn">Remove</button></form>
+        </div></div>
+    {% else %}<p class="muted">No saved addresses yet.</p>{% endfor %}
+    <details style="margin-top:14px"><summary><b>Add an address</b></summary>
+      <form method="post" action="{{ url_for('auth.add_address') }}" style="margin-top:12px">{{ csrf() }}
+        <div class="field"><label>Full name</label><input name="full_name" required></div>
+        <div class="field"><label>Phone</label><input name="phone" type="tel" required></div>
+        <div class="field"><label>Address line 1</label><input name="line1" required></div>
+        <div class="field"><label>Address line 2</label><input name="line2"></div>
+        <div class="grid-2"><div class="field"><label>City</label><input name="city" required></div><div class="field"><label>State</label><input name="state" required></div></div>
+        <div class="field"><label>PIN code</label><input name="pincode" inputmode="numeric" maxlength="6" pattern="\d{6}" required></div>
+        <label class="check" style="margin-bottom:12px"><input type="checkbox" name="is_default" value="1"> Make this my default</label>
+        <button class="btn">Save address</button>
+      </form></details>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import csrf, cover %}
+{% block title %}Your cart · PU Book Store{% endblock %}
+{% block content %}
+<h1>Your cart</h1>
+{% if not items %}
+  <div class="empty"><h2>Your cart is empty</h2><p class="muted">Add a book and it will wait for you here.</p><a class="btn" href="{{ url_for('shop.catalogue') }}">Browse books</a></div>
+{% else %}
+<div class="two-col">
+  <section class="panel">
+    {% for i in items %}
+    <div class="line" data-line="{{ i.id }}">
+      <a href="{{ url_for('shop.book', book_id=i.id) }}">{{ cover(i) }}</a>
+      <div>
+        <a class="line-title" href="{{ url_for('shop.book', book_id=i.id) }}">{{ i.name }}</a>
+        <div class="small muted">{{ i.author }} · {{ i.price|money }} each</div>
+        {% if i.unavailable %}<div class="stock out">Out of stock. Remove it to check out.</div>
+        {% elif i.stock <= 5 %}<div class="stock low">Only {{ i.stock }} left</div>{% endif %}
+        <div class="line-controls">
+          {% if not i.unavailable %}
+          <div class="qty" role="group" aria-label="Quantity">
+            <button type="button" data-step="-1" aria-label="Decrease quantity">−</button>
+            <output>{{ i.qty }}</output>
+            <button type="button" data-step="1" aria-label="Increase quantity">+</button>
+          </div>{% endif %}
+          <button type="button" class="link-btn small" data-remove>Remove</button>
+        </div>
+      </div>
+      <div class="line-total">{{ i.line_total|money }}</div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <aside>
+    <div class="panel">
+      <h3>Order summary</h3>
+      <div class="progress" aria-hidden="true"><i style="width: {{ [100, (t.subtotal - t.discount) / free_above * 100]|min|round|int }}%"></i></div>
+      <p class="small muted" data-ship-note {{ 'hidden' if not t.free_ship_gap }}>Add <b data-ship-gap>{{ t.free_ship_gap|money }}</b> more for free delivery.</p>
+      <div class="sum-row"><span>Subtotal</span><span data-sum="subtotal">{{ t.subtotal|money }}</span></div>
+      <div class="sum-row" data-sum-row="discount" {{ 'hidden' if not t.discount }}><span>Coupon {{ t.coupon.code if t.coupon }}</span><span class="save" data-sum="discount">−{{ t.discount|money }}</span></div>
+      <div class="sum-row"><span>Delivery</span><span data-sum="shipping">{{ 'FREE' if t.shipping == 0 else t.shipping|money }}</span></div>
+      <div class="sum-row total"><span>Total</span><span data-sum="total">{{ t.total|money }}</span></div>
+      <a class="btn btn-hl btn-block" style="margin-top:14px" href="{{ url_for('orders.checkout') }}">{{ 'Proceed to checkout' if g.user else 'Log in to check out' }}</a>
+    </div>
+
+    <div class="panel">
+      <h3>Have a coupon?</h3>
+      {% if t.coupon %}
+        <form method="post" action="{{ url_for('cart.remove_coupon') }}" class="coupon-form">{{ csrf() }}
+          <span class="chip">{{ t.coupon.code }} · {{ t.coupon.percent }}% off</span><button class="link-btn small">Remove</button></form>
+      {% else %}
+        <form method="post" action="{{ url_for('cart.apply_coupon') }}" class="coupon-form">{{ csrf() }}
+          <input id="coupon-code" name="code" placeholder="Enter code" aria-label="Coupon code" autocomplete="off"><button class="btn btn-sm">Apply</button></form>
+        <div class="coupon-list">{% for c in coupons %}<button type="button" class="coupon-tag" data-coupon="{{ c.code }}" title="{{ c.percent }}% off{{ ' over ' ~ (c.min_amount|money) if c.min_amount }}">{{ c.code }}</button>{% endfor %}</div>
+        <p class="small muted" style="margin:8px 0 0">Tap a code to fill it in.</p>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

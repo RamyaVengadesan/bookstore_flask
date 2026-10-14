@@ -1,0 +1,70 @@
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro stars(rating, count=None) %}
+<span class="stars" title="{{ '%.1f'|format(rating or 0) }} out of 5" aria-label="Rated {{ '%.1f'|format(rating or 0) }} out of 5">
+  <span class="stars-fill" style="width: {{ ((rating or 0) / 5 * 100)|round(0) }}%">★★★★★</span><span class="stars-bg">★★★★★</span>
+</span>
+<span class="rating-num">{{ '%.1f'|format(rating or 0) }}</span>{% if count is not none %}<span class="muted small">({{ count }})</span>{% endif %}
+{% endmacro %}
+
+{% macro cover(b, size='') %}
+<div class="cover cc{{ b.category_id % 6 }} {{ size }}">
+  <span class="cover-title">{{ b.name }}</span>
+  <span class="cover-author">{{ b.author }}</span>
+  {% if b.image %}<img src="{{ b.image }}" alt="Cover of {{ b.name }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}
+</div>
+{% endmacro %}
+
+{% macro off(b) %}{% if b.mrp and b.mrp > b.price %}{{ (((b.mrp - b.price) / b.mrp) * 100)|round|int }}{% endif %}{% endmacro %}
+
+{% macro book_card(b, wished) %}
+<article class="card">
+  <a class="card-cover" href="{{ url_for('shop.book', book_id=b.id) }}" tabindex="-1" aria-hidden="true">{{ cover(b) }}</a>
+  <button type="button" class="wish-btn {{ 'on' if b.id in wished }}" data-id="{{ b.id }}"
+          aria-label="Save {{ b.name }} to wishlist" aria-pressed="{{ 'true' if b.id in wished else 'false' }}">
+    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 5 6 5c2 0 3.4 1.1 4 2.2h4C14.6 6.100 16 5 18 5c3.300 0 5.100 3.400 3.600 6.800C19.500 16.400 12 21 12 21z" transform="translate(0 -.5)"/></svg>
+  </button>
+  {% set pct = off(b)|trim %}{% if pct %}<span class="off-badge">{{ pct }}% off</span>{% endif %}
+  <div class="card-body">
+    <a class="card-title" href="{{ url_for('shop.book', book_id=b.id) }}">{{ b.name }}</a>
+    <div class="card-author">{{ b.author }}</div>
+    <div class="card-rating">{{ stars(b.rating, b.review_count if b.review_count else None) }}</div>
+    <div class="price-row">
+      <span class="price">{{ b.price|money }}</span>
+      {% if b.mrp and b.mrp > b.price %}<s class="mrp">{{ b.mrp|money }}</s>{% endif %}
+    </div>
+    {% if b.stock <= 0 %}<div class="stock out">Out of stock</div>
+    {% elif b.stock <= 5 %}<div class="stock low">Only {{ b.stock }} left</div>
+    {% else %}<div class="stock in">In stock</div>{% endif %}
+    <form method="post" action="{{ url_for('cart.add', book_id=b.id) }}" data-ajax-add>
+      {{ csrf() }}
+      <button class="btn btn-block" {{ 'disabled' if b.stock <= 0 }}>{{ 'Add to cart' if b.stock > 0 else 'Unavailable' }}</button>
+    </form>
+  </div>
+</article>
+{% endmacro %}
+
+{% macro pagination(page, pages, endpoint, args) %}
+{% if pages > 1 %}
+<nav class="pager" aria-label="Pagination">
+  {% if page > 1 %}<a href="{{ url_for(endpoint, page=page-1, **args) }}">Previous</a>{% endif %}
+  {% for p in range(1, pages + 1) %}
+    {% if p == page %}<span class="current" aria-current="page">{{ p }}</span>
+    {% else %}<a href="{{ url_for(endpoint, page=p, **args) }}">{{ p }}</a>{% endif %}
+  {% endfor %}
+  {% if page < pages %}<a href="{{ url_for(endpoint, page=page+1, **args) }}">Next</a>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro badge(status) %}
+<span class="badge st-{{ status|lower|replace(' ', '-') }}">{{ status }}</span>
+{% endmacro %}
+
+{% macro admin_nav(active) %}
+<nav class="admin-nav" aria-label="Admin">
+  {% for key, label, ep in [('dash','Overview','admin.dashboard'),('books','Books','admin.books'),('orders','Orders','admin.orders'),('users','Customers','admin.users'),('coupons','Coupons','admin.coupons'),('cats','Categories','admin.categories')] %}
+    <a href="{{ url_for(ep) }}" class="{{ 'active' if active == key }}">{{ label }}</a>
+  {% endfor %}
+</nav>
+{% endmacro %}

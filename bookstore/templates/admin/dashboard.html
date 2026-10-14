@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import admin_nav, badge %}
+{% block title %}Admin · PU Book Store{% endblock %}
+{% block content %}
+<h1>Admin</h1>
+{{ admin_nav('dash') }}
+<div class="kpis">
+  <div class="kpi"><div class="v">{{ totals.revenue|money }}</div><div class="l">Revenue (excluding cancelled)</div></div>
+  <div class="kpi"><div class="v">{{ totals.orders }}</div><div class="l">Orders</div></div>
+  <div class="kpi"><div class="v">{{ pending }}</div><div class="l">Waiting to ship</div></div>
+  <div class="kpi"><div class="v">{{ users }}</div><div class="l">Customers</div></div>
+  <div class="kpi"><div class="v">{{ books.n }}</div><div class="l">Titles · {{ books.copies }} copies</div></div>
+</div>
+<div class="admin-grid">
+  <section class="panel"><h3>Revenue, last 7 days</h3>
+    <div class="chart">{% for c in chart %}
+      <div class="col" title="{{ c.n }} orders"><b>{{ c.revenue|money if c.revenue else '' }}</b><i style="height: {{ (c.revenue / peak * 100)|round|int }}%"></i><span>{{ c.label }}</span></div>
+    {% endfor %}</div></section>
+  <section class="panel"><h3>Low stock</h3>
+    {% for b in low_stock %}<div class="sum-row"><a href="{{ url_for('admin.book_edit', book_id=b.id) }}">{{ b.name }}</a><b class="{{ 'stock out' if b.stock == 0 else 'stock low' }}">{{ b.stock }} left</b></div>
+    {% else %}<p class="muted">Everything is well stocked.</p>{% endfor %}</section>
+</div>
+<div class="admin-grid">
+  <section class="panel"><h3>Recent orders</h3>
+    {% if recent %}<div class="table-wrap" style="border:0"><table class="data"><tbody>
+      {% for o in recent %}<tr><td><a href="{{ url_for('admin.order', order_id=o.id) }}">{{ order_ref(o.id) }}</a></td><td>{{ o.fullname }}</td><td>{{ badge(o.status) }}</td><td class="num">{{ o.total|money }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<p class="muted">No orders yet.</p>{% endif %}</section>
+  <section class="panel"><h3>Top sellers</h3>
+    {% for t in top %}<div class="sum-row"><span>{{ t.title }}</span><b>{{ t.sold }} sold</b></div>{% else %}<p class="muted">Sales will show up here.</p>{% endfor %}</section>
+</div>
+{% endblock %}

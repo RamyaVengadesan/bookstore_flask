@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import book_card %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>Textbooks for the <mark>semester ahead</mark>, shelved by department.</h1>
+    <p class="lead">Pick your branch, find the book your syllabus names, and have it at your door. Genuine editions from Pearson, Wiley, McGraw Hill and more.</p>
+    <div class="hero-cta">
+      <a class="btn btn-hl" href="{{ url_for('shop.catalogue') }}">Browse all books</a>
+      {% if not g.user %}<a class="btn btn-ghost" href="{{ url_for('auth.register') }}">Create an account</a>{% endif %}
+    </div>
+    <div class="hero-stats">
+      <div><b>{{ stats.books }}</b>titles in stock</div>
+      <div><b>{{ stats.copies }}</b>copies ready to ship</div>
+      <div><b>₹500+</b>ships free</div>
+    </div>
+  </div>
+  <div class="shelf" role="navigation" aria-label="Shop by department">
+    {% set heights = [250, 300, 270, 320] %}
+    {% for c in cat_counts %}
+      <a class="spine cc{{ c.id % 6 }}" style="height: {{ heights[loop.index0 % 4] }}px; width: 64px" href="{{ url_for('shop.catalogue', category=c.slug) }}" title="{{ c.n }} books"><span>{{ c.name }}</span></a>
+      <a class="spine plain cc{{ (c.id + 2) % 6 }}" style="height: {{ heights[(loop.index0 + 2) % 4] - 50 }}px" href="{{ url_for('shop.catalogue', category=c.slug) }}" tabindex="-1" aria-hidden="true"><span>{{ c.n }} titles</span></a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Best sellers</h2><a href="{{ url_for('shop.catalogue', sort='relevance') }}">See all</a></div>
+  <div class="grid">{% for b in bestsellers %}{{ book_card(b, wished) }}{% endfor %}</div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Shop by department</h2></div>
+  <div class="cat-tiles">
+    {% for c in cat_counts %}
+      <a class="cat-tile cc{{ c.id % 6 }}" href="{{ url_for('shop.catalogue', category=c.slug) }}"><div><b>{{ c.name }}</b><span class="muted">{{ c.n }} books</span></div></a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Top rated</h2><a href="{{ url_for('shop.catalogue', sort='rating') }}">See all</a></div>
+  <div class="grid">{% for b in top_rated %}{{ book_card(b, wished) }}{% endfor %}</div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Just added</h2><a href="{{ url_for('shop.catalogue', sort='newest') }}">See all</a></div>
+  <div class="grid">{% for b in newest %}{{ book_card(b, wished) }}{% endfor %}</div>
+</section>
+
+<section class="section perks">
+  <div class="perk"><b>Free delivery above ₹500</b><span class="muted">Smaller orders ship for ₹40.</span></div>
+  <div class="perk"><b>Cancel before it ships</b><span class="muted">Stock returns to the shelf and any online payment is refunded.</span></div>
+  <div class="perk"><b>Track every order</b><span class="muted">See each step from Pending to Delivered in your account.</span></div>
+</section>
+{% endblock %}

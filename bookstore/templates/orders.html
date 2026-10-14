@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import cover, badge %}
+{% block title %}Your orders · PU Book Store{% endblock %}
+{% block content %}
+<h1>Your orders</h1>
+{% if not orders %}
+  <div class="empty"><h2>No orders yet</h2><p class="muted">Once you place an order you can track it here.</p><a class="btn" href="{{ url_for('shop.catalogue') }}">Find a book</a></div>
+{% else %}
+  {% for o in orders %}
+  <div class="panel order-card">
+    <div class="thumbs">{% for p in previews[o.id] %}<div class="cover sm cc{{ loop.index % 6 }}">{% if p.image %}<img src="{{ p.image }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>{% endfor %}</div>
+    <div>
+      <b>{{ order_ref(o.id) }}</b> {{ badge(o.status) }}
+      <div class="small muted">{{ o.created_at|dt }} · {{ o.n_items }} {{ 'item' if o.n_items == 1 else 'items' }} · {{ o.total|money }}</div>
+    </div>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('orders.detail', order_id=o.id) }}">View details</a>
+  </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

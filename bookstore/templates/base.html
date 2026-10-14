@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}PU Book Store{% endblock %}</title>
+  <script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f2a5a'/%3E%3Crect x='8' y='7' width='6' height='18' fill='%23f2b705'/%3E%3Crect x='16' y='10' width='6' height='15' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="strip">Free delivery on orders above ₹500. Use code <b>WELCOME10</b> for 10% off your first order.</div>
+
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="{{ url_for('shop.home') }}" aria-label="PU Book Store home">
+      <span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i></span>PU Book Store
+    </a>
+    <form class="search" action="{{ url_for('shop.catalogue') }}" role="search" autocomplete="off">
+      <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Search title, author or ISBN" aria-label="Search books" id="search-input">
+      <button aria-label="Search"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.500-3.500"/></svg></button>
+      <div class="suggest" id="suggest" hidden></div>
+    </form>
+    <nav class="actions" aria-label="Account">
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch light or dark theme">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.800A9 9 0 1 1 11.200 3a7 7 0 0 0 9.800 9.800z"/></svg>
+      </button>
+      {% if g.user %}
+        <a class="icon-link" href="{{ url_for('shop.wishlist') }}">Wishlist</a>
+        <a class="icon-link" href="{{ url_for('orders.history') }}">Orders</a>
+        <div class="menu">
+          <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false">{{ g.user.fullname.split()[0] }}</button>
+          <div class="menu-list" hidden>
+            <a href="{{ url_for('auth.account') }}">My account</a>
+            {% if g.user.is_admin %}<a href="{{ url_for('admin.dashboard') }}">Admin panel</a>{% endif %}
+            <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button>Log out</button></form>
+          </div>
+        </div>
+      {% else %}
+        <a class="icon-link" href="{{ url_for('auth.login') }}">Log in</a>
+        <a class="btn btn-sm" href="{{ url_for('auth.register') }}">Sign up</a>
+      {% endif %}
+      <a class="cart-link" href="{{ url_for('cart.view') }}" aria-label="Cart, {{ cart_count }} items">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h2l2.600 11h10.800L21 7H6.200"/><circle cx="9" cy="20" r="1.500"/><circle cx="17" cy="20" r="1.500"/></svg>
+        <span class="cart-badge" id="cart-badge" {{ 'hidden' if not cart_count }}>{{ cart_count }}</span>
+      </a>
+    </nav>
+  </div>
+  <nav class="wrap cats" aria-label="Departments">
+    <a href="{{ url_for('shop.catalogue') }}" class="{{ 'active' if current_endpoint == 'shop.catalogue' and not request.args.get('category') }}">All books</a>
+    {% for c in nav_categories %}
+      <a href="{{ url_for('shop.catalogue', category=c.slug) }}" class="{{ 'active' if request.args.get('category') == c.slug }}">{{ c.name }}</a>
+    {% endfor %}
+  </nav>
+</header>
+
+<div class="toasts" id="toasts" aria-live="polite">
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="toast {{ cat }}" role="status">{{ msg }}</div>
+  {% endfor %}
+</div>
+
+<main id="main" class="wrap">{% block content %}{% endblock %}</main>
+
+<footer class="site-footer">
+  <div class="wrap foot">
+    <div><div class="logo">PU Book Store</div><p class="muted">Engineering textbooks for CSE, ECE, EEE and Civil students, delivered to your door.</p></div>
+    <div><h4>Shop</h4>{% for c in nav_categories %}<a href="{{ url_for('shop.catalogue', category=c.slug) }}">{{ c.name }}</a>{% endfor %}</div>
+    <div><h4>Your account</h4><a href="{{ url_for('orders.history') }}">Track orders</a><a href="{{ url_for('shop.wishlist') }}">Wishlist</a><a href="{{ url_for('auth.account') }}">Addresses</a></div>
+    <div><h4>Good to know</h4><span>Free delivery above ₹500</span><span>Cancel any time before shipping</span><span>Payments here are a demo; no money moves.</span></div>
+  </div>
+</footer>
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
