@@ -4,11 +4,9 @@ A complete, production-style online bookstore built with **Flask, SQLite, Jinja 
 
 > **Demo project.** Prices, stock, ratings and orders are sample data. Payments are simulated: no card details are collected and no money moves.
 
-![Storefront home page](docs/screenshots/storefront-home.png)
 
 ## Contents
 - [Highlights](#highlights)
-- [Screenshots](#screenshots)
 - [Quick start](#quick-start)
 - [Configuration](#configuration)
 - [Customer storefront](#customer-storefront)
@@ -29,23 +27,6 @@ A complete, production-style online bookstore built with **Flask, SQLite, Jinja 
 - **Complete order flow:** guest and saved carts, coupons, address book, Cash on Delivery or demo UPI and card, five-step tracking, invoices, cancellation, 7-day returns and reorder.
 - **Admin console:** KPI dashboard and charts, date-range reports, CSV export and import, bulk book and order actions, returns, review moderation, inbox, banners, coupons, settings and an activity log.
 - **No front-end build step.** One dependency: Flask. The database is created and filled automatically on first run.
-
-## Screenshots
-| Catalogue and filters | Book page |
-|---|---|
-| ![Catalogue](docs/screenshots/catalogue.png) | ![Book page](docs/screenshots/book-page.png) |
-
-| Admin dashboard | Admin reports |
-|---|---|
-| ![Dashboard](docs/screenshots/admin-dashboard.png) | ![Reports](docs/screenshots/admin-reports.png) |
-
-| Books and bulk tools | Returns workflow |
-|---|---|
-| ![Books](docs/screenshots/admin-books.png) | ![Returns](docs/screenshots/admin-returns.png) |
-
-<img src="docs/screenshots/mobile-home.png" alt="Mobile storefront" width="280">
-
-*(The admin screenshots use demo orders created only for the pictures. A fresh install starts with no orders.)*
 
 ## Quick start
 Requires **Python 3.10 or newer**.
