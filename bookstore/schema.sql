@@ -1,5 +1,13 @@
 PRAGMA foreign_keys = ON;
 
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS subscribers;
+DROP TABLE IF EXISTS password_resets;
+DROP TABLE IF EXISTS returns;
+DROP TABLE IF EXISTS review_votes;
+DROP TABLE IF EXISTS banners;
+DROP TABLE IF EXISTS admin_log;
+DROP TABLE IF EXISTS settings;
 DROP TABLE IF EXISTS order_events;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
@@ -24,9 +32,11 @@ CREATE TABLE users (
 );
 
 CREATE TABLE categories (
-    id    INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug  TEXT NOT NULL UNIQUE,
-    name  TEXT NOT NULL
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug        TEXT NOT NULL UNIQUE,
+    name        TEXT NOT NULL,
+    group_name  TEXT NOT NULL DEFAULT 'More',   -- shown as a column in the departments menu
+    sort_order  INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE books (
@@ -43,6 +53,8 @@ CREATE TABLE books (
     review_count  INTEGER NOT NULL DEFAULT 0,
     sold_count    INTEGER NOT NULL DEFAULT 0,
     description   TEXT,
+    language      TEXT NOT NULL DEFAULT 'English',
+    format        TEXT NOT NULL DEFAULT 'Paperback',
     image         TEXT,
     created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -132,3 +144,74 @@ CREATE TABLE order_events (
     note       TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Home page hero banners (managed in the admin panel)
+CREATE TABLE banners (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    title         TEXT NOT NULL,
+    subtitle      TEXT,
+    cta_text      TEXT NOT NULL DEFAULT 'Shop now',
+    link          TEXT NOT NULL DEFAULT '/books',
+    theme         TEXT NOT NULL DEFAULT 'indigo',      -- indigo | violet | amber | teal
+    category_slug TEXT,                                -- covers shown on the banner come from here
+    active        INTEGER NOT NULL DEFAULT 1,
+    sort_order    INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE review_votes (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    review_id  INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, review_id)
+);
+
+CREATE TABLE returns (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id    INTEGER NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason      TEXT NOT NULL,
+    details     TEXT,
+    status      TEXT NOT NULL DEFAULT 'Requested',     -- Requested | Approved | Rejected | Refunded
+    admin_note  TEXT,
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE password_resets (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash  TEXT NOT NULL UNIQUE,
+    expires_at  TEXT NOT NULL,
+    used        INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE subscribers (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    email       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE messages (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    email       TEXT NOT NULL,
+    subject     TEXT NOT NULL,
+    body        TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'New',           -- New | Resolved
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---- admin console (phase 3)
+CREATE TABLE settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE admin_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    action     TEXT NOT NULL,
+    detail     TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+PRAGMA user_version = 4;

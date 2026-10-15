@@ -1,66 +1,91 @@
 {% extends 'base.html' %}
 {% from 'partials/macros.html' import book_card, pagination %}
-{% block title %}{{ 'Search: ' ~ q if q else 'All books' }} · PU Book Store{% endblock %}
+{% block title %}{{ title }} · {{ brand.name }}{% endblock %}
+{% block description %}{{ title }}: {{ total }} books at {{ brand.name }}. Filter by department, publisher, language, rating and price.{% endblock %}
 {% block content %}
+<nav class="crumbs"><a href="{{ url_for('shop.home') }}">Home</a> / {% if f.get('group') or cat %}<a href="{{ url_for('shop.catalogue') }}">Books</a> / {% endif %}{{ title }}</nav>
 <div class="page-head">
-  <div>
-    <h1>{% if q %}Results for “{{ q }}”{% elif cat %}{{ (nav_categories|selectattr('slug','equalto',cat)|first).name if (nav_categories|selectattr('slug','equalto',cat)|list) else 'Books' }}{% else %}All books{% endif %}</h1>
-    <span class="muted">{{ total }} {{ 'book' if total == 1 else 'books' }}</span>
-  </div>
-  <button class="btn btn-ghost btn-sm filter-toggle" type="button">Filters</button>
+  <div><h1>{{ title }}</h1><span class="muted">{{ total }} {{ 'book' if total == 1 else 'books' }}</span></div>
+  <button class="btn btn-ghost btn-sm filter-toggle" type="button" aria-expanded="false">Filters</button>
 </div>
 
 <div class="catalogue">
-  <form class="filters" method="get" id="filter-form">
-    {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
-    <input type="hidden" name="sort" value="{{ sort }}">
+  <aside class="filters" aria-label="Filters">
     <div class="group">
       <h3>Department</h3>
-      <a class="opt {{ 'active' if not cat }}" href="{{ url_for('shop.catalogue', q=q or None, sort=sort) }}">All books <span class="n">{{ counts.values()|sum }}</span></a>
-      {% for c in nav_categories %}
-        <a class="opt {{ 'active' if cat == c.slug }}" href="{{ url_for('shop.catalogue', category=c.slug, q=q or None, sort=sort) }}">{{ c.name }} <span class="n">{{ counts.get(c.slug, 0) }}</span></a>
+      <a class="opt {{ 'active' if not cat and not f.get('group') }}" href="{{ without('category', 'group') }}">All books <span class="n">{{ counts.values()|sum }}</span></a>
+      {% for group, cats in nav_groups.items() %}
+        <a class="opt-group" href="{{ facet_url('group', group) }}">{{ group }}</a>
+        {% for c in cats %}
+          <a class="opt {{ 'active' if cat == c.slug }}" href="{{ cat_url(c.slug) }}">{{ c.name }} <span class="n">{{ counts.get(c.slug, 0) }}</span></a>
+        {% endfor %}
       {% endfor %}
     </div>
-    {% if cat %}<input type="hidden" name="category" value="{{ cat }}">{% endif %}
+
     <div class="group">
+      <h3>Customer rating</h3>
+      {% for r in [4, 3] %}<a class="opt {{ 'active' if f.get('rating') == r|string }}" href="{{ facet_url('rating', r) }}"><span><span class="stars"><span class="stars-fill" style="width:{{ r * 20 }}%">★★★★★</span><span class="stars-bg">★★★★★</span></span> &amp; up</span></a>{% endfor %}
+    </div>
+
+    <div class="group">
+      <h3>Discount</h3>
+      {% for d in [10, 20, 30] %}<a class="opt {{ 'active' if f.get('discount') == d|string }}" href="{{ facet_url('discount', d) }}">{{ d }}% off or more</a>{% endfor %}
+    </div>
+
+    {% if publishers|length > 1 %}
+    <div class="group">
+      <h3>Publisher</h3>
+      <div class="facet-scroll">
+      {% for p in publishers %}<a class="opt {{ 'active' if f.get('publisher') == p.name }}" href="{{ facet_url('publisher', p.name) }}">{{ p.name }} <span class="n">{{ p.n }}</span></a>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if languages|length > 1 or f.get('language') %}
+    <div class="group">
+      <h3>Language</h3>
+      {% for l in languages %}<a class="opt {{ 'active' if f.get('language') == l.name }}" href="{{ facet_url('language', l.name) }}">{{ l.name }} <span class="n">{{ l.n }}</span></a>{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="get" class="group">
+      {% for k, v in base_args.items() if k not in ('min_price', 'max_price', 'in_stock') %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
       <h3>Price (₹)</h3>
       <div class="price-inputs">
-        <input type="number" name="min_price" min="0" placeholder="Min" value="{{ min_price }}" aria-label="Minimum price">
+        <input type="number" name="min_price" min="0" placeholder="Min" value="{{ f.get('min_price', '') }}" aria-label="Minimum price">
         <span>to</span>
-        <input type="number" name="max_price" min="0" placeholder="Max" value="{{ max_price }}" aria-label="Maximum price">
+        <input type="number" name="max_price" min="0" placeholder="Max" value="{{ f.get('max_price', '') }}" aria-label="Maximum price">
       </div>
-    </div>
-    <div class="group">
-      <label class="check"><input type="checkbox" name="in_stock" value="1" {{ 'checked' if in_stock }} data-autosubmit> In stock only</label>
-    </div>
-    <button class="btn btn-block btn-sm">Apply filters</button>
-  </form>
+      <label class="check" style="margin:12px 0"><input type="checkbox" name="in_stock" value="1" {{ 'checked' if f.get('in_stock') }}> In stock only</label>
+      <button class="btn btn-block btn-sm">Apply</button>
+    </form>
+  </aside>
 
   <section>
-    <form class="toolbar" method="get">
-      {% for k, v in base_args.items() if k != 'sort' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+    <div class="toolbar">
       <div class="chips">
-        {% if q %}<span class="chip">Search: {{ q }}</span>{% endif %}
-        {% if in_stock %}<span class="chip">In stock</span>{% endif %}
-        {% if min_price or max_price %}<span class="chip">₹{{ min_price or 0 }} – {{ max_price or 'any' }}</span>{% endif %}
-        {% if q or in_stock or min_price or max_price or cat %}<a class="small" href="{{ url_for('shop.catalogue') }}">Clear all</a>{% endif %}
+        {% for label, url in chips %}<a class="chip" href="{{ url }}" aria-label="Remove filter {{ label }}">{{ label }} <span aria-hidden="true">×</span></a>{% endfor %}
+        {% if chips|length > 1 %}<a class="small" href="{{ url_for('shop.catalogue') }}">Clear all</a>{% endif %}
       </div>
-      <label class="check small">Sort by
-        <select name="sort" data-autosubmit>
-          {% for key, label in [('relevance','Best selling'),('rating','Top rated'),('price_asc','Price: low to high'),('price_desc','Price: high to low'),('newest','Newest'),('name','Title A–Z')] %}
-            <option value="{{ key }}" {{ 'selected' if sort == key }}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </label>
-    </form>
+      <form method="get">
+        {% for k, v in base_args.items() if k != 'sort' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <label class="check small">Sort by
+          <select name="sort" data-autosubmit>
+            {% for key, label in [('relevance','Best selling'),('rating','Top rated'),('discount','Biggest discount'),('price_asc','Price: low to high'),('price_desc','Price: high to low'),('newest','Newest'),('name','Title A to Z')] %}
+              <option value="{{ key }}" {{ 'selected' if sort == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </form>
+    </div>
 
     {% if books %}
       <div class="grid">{% for b in books %}{{ book_card(b, wished) }}{% endfor %}</div>
       {{ pagination(page, pages, 'shop.catalogue', base_args) }}
     {% else %}
       <div class="empty">
-        <h2>No books match</h2>
-        <p class="muted">Try a shorter search, a different department, or remove the price filter.</p>
+        <h2>No books match your filters</h2>
+        <p class="muted">Try removing a filter, checking the spelling, or searching by author instead.</p>
         <a class="btn" href="{{ url_for('shop.catalogue') }}">Show all books</a>
       </div>
     {% endif %}

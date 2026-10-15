@@ -1,0 +1,15 @@
+{% extends 'pages/_page.html' %}
+{% block body %}
+<h1>Returns and refunds</h1>
+<h2>Cancelling an order</h2>
+<p>You can cancel an order until it is shipped. The books go back to stock and any payment made online is refunded.</p>
+<h2>Returning a delivered order</h2>
+<p>Request a return within <b>7 days of delivery</b> if your book arrived damaged or defective, if we sent the wrong item, if it is not as described, or if you ordered by mistake. One return request can be made per order.</p>
+<ol>
+  <li>Open the order in <a href="{{ url_for('orders.history') }}">My orders</a> and choose <b>Request a return</b>.</li>
+  <li>Pick a reason and add a few details.</li>
+  <li>We review the request and update its status in your order page: Approved, Rejected or Refunded.</li>
+</ol>
+<h2>Refunds</h2>
+<p>Approved returns are refunded to the original payment method once the books are received back and checked.</p>
+{% endblock %}

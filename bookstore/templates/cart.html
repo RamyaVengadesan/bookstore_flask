@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% from 'partials/macros.html' import csrf, cover %}
-{% block title %}Your cart · PU Book Store{% endblock %}
+{% block title %}Your cart · {{ brand.name }}{% endblock %}
 {% block content %}
 <h1>Your cart</h1>
 {% if not items %}

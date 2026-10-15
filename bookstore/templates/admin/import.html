@@ -1,0 +1,44 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf, icon %}
+{% block title %}Import books{% endblock %}
+{% block actions %}<a class="btn btn-ghost btn-sm" href="{{ url_for('admin.books_template') }}">{{ icon('download', 15) }} Download template</a>{% endblock %}
+{% block content %}
+<div class="adm-grid even">
+  <section class="panel">
+    <h3>Upload a CSV</h3>
+    <p class="muted">Add or update many books at once. Rows whose ISBN already exists update that book; everything else is added.</p>
+    <form method="post" enctype="multipart/form-data">
+      {{ csrf() }}
+      <div class="field"><label for="file">CSV file (UTF-8, up to 2,000 rows)</label><input id="file" type="file" name="file" accept=".csv,text/csv" required></div>
+      <label class="check" style="margin-bottom:16px"><input type="checkbox" name="dry" value="1" checked> Check only: show what would happen without saving</label>
+      <button class="btn">Run import</button>
+    </form>
+  </section>
+  <section class="panel">
+    <h3>Columns</h3>
+    <p class="small muted">Header names are not case sensitive. Required: <b>name, author, publisher, category, price, stock</b>.</p>
+    <p><code class="cols">{{ cols|join(', ') }}</code></p>
+    <ul class="small muted" style="padding-left:18px">
+      <li><b>category</b> is a department name or URL name exactly as in Departments.</li>
+      <li><b>mrp</b> (optional) must not be lower than price.</li>
+      <li>Use the template to avoid formatting surprises. Save from Excel as “CSV UTF-8”.</li>
+    </ul>
+  </section>
+</div>
+{% if result and not result.fatal %}
+<section class="panel" style="margin-top:18px">
+  <h3>{{ 'Check result (nothing saved yet)' if result.dry else 'Import result' }}</h3>
+  <div class="kpis" style="margin-bottom:12px">
+    <div class="kpi"><div class="l">Rows read</div><div class="v">{{ result.rows }}</div></div>
+    <div class="kpi"><div class="l">{{ 'Would add' if result.dry else 'Added' }}</div><div class="v">{{ result.added }}</div></div>
+    <div class="kpi"><div class="l">{{ 'Would update' if result.dry else 'Updated' }}</div><div class="v">{{ result.updated }}</div></div>
+    <div class="kpi"><div class="l">Skipped (problems)</div><div class="v">{{ result.errors|length }}</div></div>
+  </div>
+  {% if result.errors %}
+  <div class="table-wrap flat tall"><table class="data"><thead><tr><th>Row</th><th>Title</th><th>Problem</th></tr></thead><tbody>
+    {% for n, t, p in result.errors %}<tr><td>{{ n }}</td><td>{{ t }}</td><td class="bad">{{ p }}</td></tr>{% endfor %}</tbody></table></div>
+  {% endif %}
+  {% if result.dry and (result.added or result.updated) %}<p class="muted small" style="margin:12px 0 0">Looks right? Upload the same file again with “Check only” turned off.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

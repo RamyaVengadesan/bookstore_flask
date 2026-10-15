@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Readora logo">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b4cca"/><stop offset="1" stop-color="#7a3df0"/></linearGradient></defs>
+  <rect width="32" height="32" rx="9" fill="url(#g)"/>
+  <path d="M16 10.600C13.500 8.800 10.200 8.500 7.400 9.300V22C10.200 21.200 13.500 21.500 16 23.300Z" fill="#fff"/>
+  <path d="M16 10.600C18.500 8.800 21.800 8.500 24.600 9.300V22C21.800 21.200 18.500 21.500 16 23.300Z" fill="#fff" fill-opacity=".82"/>
+  <path d="M19.400 9.100h3.200v7.400l-1.600-1.500-1.600 1.500z" fill="#f2b705"/>
+</svg>

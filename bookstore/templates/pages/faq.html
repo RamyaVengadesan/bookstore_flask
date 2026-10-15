@@ -1,0 +1,16 @@
+{% extends 'pages/_page.html' %}
+{% block body %}
+<h1>Help and FAQ</h1>
+{% for q, a in [
+ ('How long does delivery take?', 'Most orders arrive in 2 to 5 working days depending on your PIN code. Enter your PIN code on any book page to see an estimated date.'),
+ ('How much is delivery?', 'Delivery is free on orders of ' ~ (free_above|float|money) ~ ' or more after any coupon. Smaller orders pay a flat ' ~ (ship_fee|float|money) ~ '.'),
+ ('Which payment methods can I use?', 'Cash on Delivery, UPI and cards. In this demo store the UPI and card options simply mark the order as paid and no payment details are collected.'),
+ ('Can I cancel my order?', 'Yes, until it ships. Open the order from My orders and choose Cancel order. The books return to stock and any online payment is refunded.'),
+ ('How do returns work?', 'Within 7 days of delivery, open the order and choose Request a return. Tell us what went wrong, and we will review it and update you.'),
+ ('How do coupons work?', 'Enter a code in your cart. Each coupon has a minimum cart value and may have a maximum discount. The cart shows exactly what you save.'),
+ ('I forgot my password.', 'Use Forgot password on the login page. We will email you a link that works for one hour.'),
+ ('A book I want is out of stock.', 'Save it to your wishlist and check back. Restocked titles reappear on the site as soon as stock is updated.')] %}
+<details class="faq"><summary>{{ q }}</summary><p>{{ a }}</p></details>
+{% endfor %}
+<p>Still stuck? <a href="{{ url_for('shop.contact') }}">Contact us</a>.</p>
+{% endblock %}

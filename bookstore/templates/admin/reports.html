@@ -1,0 +1,41 @@
+{% extends 'admin/layout.html' %}
+{% from 'admin/_m.html' import bars %}
+{% block title %}Reports{% endblock %}
+{% block actions %}
+<a class="btn btn-ghost btn-sm" href="{{ url_for('admin.export', kind='orders', **{'from': start, 'to': end}) }}">Orders CSV</a>
+<a class="btn btn-ghost btn-sm" href="{{ url_for('admin.export', kind='sales', **{'from': start, 'to': end}) }}">Sales lines CSV</a>
+{% endblock %}
+{% block content %}
+<form method="get" class="filterbar">
+  <label>From <input type="date" name="from" value="{{ start }}"></label>
+  <label>To <input type="date" name="to" value="{{ end }}"></label>
+  <button class="btn btn-sm">Apply</button>
+  <span class="muted small">Dates are in store time. Cancelled orders are excluded from revenue.</span>
+</form>
+<div class="kpis">
+  <div class="kpi"><div class="l">Revenue</div><div class="v">{{ live.revenue|money }}</div></div>
+  <div class="kpi"><div class="l">Orders</div><div class="v">{{ live.n }}</div><span class="delta">{{ cancelled }} cancelled</span></div>
+  <div class="kpi"><div class="l">Average order</div><div class="v">{{ aov|round|int|money }}</div></div>
+  <div class="kpi"><div class="l">Books sold</div><div class="v">{{ units }}</div></div>
+  <div class="kpi"><div class="l">Discounts given</div><div class="v">{{ live.discounts|money }}</div></div>
+  <div class="kpi"><div class="l">Return requests</div><div class="v">{{ returns }}</div></div>
+</div>
+<section class="panel"><h3>Revenue per day</h3>{{ bars(chart) }}</section>
+<div class="adm-grid even" style="margin-top:18px">
+  <section class="panel"><h3>By department</h3>
+    <div class="table-wrap flat"><table class="data"><thead><tr><th>Department</th><th class="num">Units</th><th class="num">Revenue</th></tr></thead><tbody>
+    {% for c in by_cat %}<tr><td>{{ c.dept }}</td><td class="num">{{ c.units }}</td><td class="num">{{ c.revenue|money }}</td></tr>{% else %}<tr><td colspan="3" class="muted">No sales in this range.</td></tr>{% endfor %}</tbody></table></div></section>
+  <section class="panel"><h3>Best sellers</h3>
+    <div class="table-wrap flat"><table class="data"><thead><tr><th>Title</th><th class="num">Units</th><th class="num">Revenue</th></tr></thead><tbody>
+    {% for b in by_book %}<tr><td>{{ b.title }}<div class="small muted">{{ b.author }}</div></td><td class="num">{{ b.units }}</td><td class="num">{{ b.revenue|money }}</td></tr>{% else %}<tr><td colspan="3" class="muted">No sales in this range.</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+<div class="adm-grid even">
+  <section class="panel"><h3>Payment methods</h3>
+    <div class="table-wrap flat"><table class="data"><tbody>{% for p in by_pay %}<tr><td>{{ p.payment_method }}</td><td class="num">{{ p.n }} orders</td><td class="num">{{ p.revenue|money }}</td></tr>{% else %}<tr><td class="muted">No orders.</td></tr>{% endfor %}</tbody></table></div></section>
+  <section class="panel"><h3>Coupons used</h3>
+    <div class="table-wrap flat"><table class="data"><tbody>{% for c in by_coupon %}<tr><td><b>{{ c.coupon_code }}</b></td><td class="num">{{ c.n }} orders</td><td class="num">{{ c.given|money }} off</td></tr>{% else %}<tr><td class="muted">No coupons used.</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+<section class="panel" style="margin-top:18px"><h3>Day by day</h3>
+  <div class="table-wrap flat tall"><table class="data"><thead><tr><th>Date</th><th class="num">Orders</th><th class="num">Revenue</th></tr></thead><tbody>
+  {% for d in daily|reverse %}<tr><td>{{ d.date }}</td><td class="num">{{ d.n }}</td><td class="num">{{ d.revenue|money }}</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf, badge, stars %}
+{% block title %}{{ u.fullname }}{% endblock %}
+{% block actions %}
+<form method="post" action="{{ url_for('admin.user_reset_link', uid=u.id) }}">{{ csrf() }}<button class="btn btn-ghost btn-sm">Create reset link</button></form>
+{% if u.id != g.user.id %}<form method="post" action="{{ url_for('admin.user_role', uid=u.id) }}" data-confirm="{{ 'Remove admin access for' if u.is_admin else 'Give admin access to' }} {{ u.fullname }}?">{{ csrf() }}<button class="btn btn-ghost btn-sm">{{ 'Remove admin' if u.is_admin else 'Make admin' }}</button></form>{% endif %}
+{% endblock %}
+{% block content %}
+{% if reset_link %}<div class="demo-note" style="margin-bottom:16px"><b>One-hour reset link</b> (send it to the customer): <a href="{{ reset_link }}">{{ request.host_url.rstrip('/') }}{{ reset_link }}</a></div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Orders</div><div class="v">{{ stats.orders }}</div><span class="delta">{{ stats.cancelled }} cancelled</span></div>
+  <div class="kpi"><div class="l">Lifetime spend</div><div class="v">{{ stats.spent|money }}</div></div>
+  <div class="kpi"><div class="l">Returns</div><div class="v">{{ returns }}</div></div>
+  <div class="kpi"><div class="l">Joined</div><div class="v" style="font-size:1.2rem">{{ u.created_at|dt('%d %b %Y') }}</div><span class="delta">@{{ u.username }}{% if u.is_admin %} · admin{% endif %}</span></div>
+</div>
+<div class="adm-grid even">
+  <section class="panel"><h3>Orders</h3>
+    <div class="table-wrap flat"><table class="data"><tbody>{% for o in orders %}<tr><td><a href="{{ url_for('admin.order', order_id=o.id) }}">{{ order_ref(o.id) }}</a></td><td>{{ o.created_at|dt('%d %b %Y') }}</td><td>{{ badge(o.status) }}</td><td class="num">{{ o.total|money }}</td></tr>{% else %}<tr><td class="muted">No orders yet.</td></tr>{% endfor %}</tbody></table></div></section>
+  <div>
+    <section class="panel"><h3>Contact</h3><p style="margin:0">{{ u.email }}<br>{{ u.phone or 'No phone on file' }}</p></section>
+    <section class="panel" style="margin-top:18px"><h3>Addresses</h3>{% for a in addresses %}<p class="small" style="margin:0 0 8px"><b>{{ a.full_name }}</b>{% if a.is_default %} <span class="chip">Default</span>{% endif %}<br>{{ a.line1 }}{{ ', ' ~ a.line2 if a.line2 }}, {{ a.city }}, {{ a.state }} {{ a.pincode }}</p>{% else %}<p class="muted" style="margin:0">None saved.</p>{% endfor %}</section>
+  </div>
+</div>
+{% if reviews %}<section class="panel" style="margin-top:18px"><h3>Recent reviews</h3>{% for r in reviews %}<div class="sum-row"><span>{{ r.name }} {{ stars(r.rating) }}</span><span class="small muted">{{ r.title }}</span></div>{% endfor %}</section>{% endif %}
+{% endblock %}

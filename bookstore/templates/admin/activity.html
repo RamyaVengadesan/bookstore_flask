@@ -1,0 +1,9 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import pagination %}
+{% block title %}Activity log{% endblock %}
+{% block content %}
+<div class="table-wrap"><table class="data"><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead><tbody>
+{% for a in rows %}<tr><td>{{ a.created_at|dt('%d %b %Y, %I:%M %p') }}</td><td>{{ a.username or 'system' }}</td><td><b>{{ a.action }}</b></td><td class="muted">{{ a.detail }}</td></tr>
+{% else %}<tr><td colspan="4" class="muted">Nothing logged yet.</td></tr>{% endfor %}</tbody></table></div>
+{{ pagination(page, pages, 'admin.activity', base) }}
+{% endblock %}

@@ -1,35 +1,61 @@
 {% extends 'base.html' %}
 {% from 'partials/macros.html' import csrf, stars, cover, off, book_card %}
-{% block title %}{{ b.name }} · PU Book Store{% endblock %}
+{% block title %}{{ b.name }} by {{ b.author }} · {{ brand.name }}{% endblock %}
+{% block description %}Buy {{ b.name }} by {{ b.author }} ({{ b.publisher }}) for {{ b.price|money }}. {{ (b.description or '')[:110] }}{% endblock %}
+{% block head %}
+<script type="application/ld+json">{{ {
+  "@context": "https://schema.org", "@type": "Book", "name": b.name, "isbn": b.isbn, "inLanguage": b.language,
+  "author": {"@type": "Person", "name": b.author}, "publisher": {"@type": "Organization", "name": b.publisher},
+  "offers": {"@type": "Offer", "price": b.price, "priceCurrency": "INR",
+             "availability": "https://schema.org/InStock" if b.stock > 0 else "https://schema.org/OutOfStock"}
+}|tojson }}</script>
+{% endblock %}
 {% block content %}
-<nav class="crumbs"><a href="{{ url_for('shop.home') }}">Home</a> / <a href="{{ url_for('shop.catalogue', category=b.category_slug) }}">{{ b.category_name }}</a> / {{ b.name }}</nav>
+<nav class="crumbs"><a href="{{ url_for('shop.home') }}">Home</a> / <a href="{{ url_for('shop.catalogue', group=b.group_name) }}">{{ b.group_name }}</a> / <a href="{{ url_for('shop.catalogue', category=b.category_slug) }}">{{ b.category_name }}</a> / {{ b.name }}</nav>
 
 <div class="book-top">
   <div>{{ cover(b, 'lg') }}</div>
   <div>
     <h1>{{ b.name }}</h1>
-    <p class="muted">by <b>{{ b.author }}</b></p>
+    <p class="byline">by <a href="{{ url_for('shop.catalogue', author=b.author) }}"><b>{{ b.author }}</b></a></p>
     <p>{{ stars(b.rating, b.review_count if b.review_count else None) }}
        {% if b.review_count %}<a class="small" href="#reviews">Read reviews</a>{% endif %}</p>
     {% if b.description %}<p class="desc">{{ b.description }}</p>{% endif %}
     <table class="meta-table">
-      <tr><td>Publisher</td><td>{{ b.publisher }}</td></tr>
-      <tr><td>ISBN</td><td>{{ b.isbn or '—' }}</td></tr>
+      <tr><td>Publisher</td><td><a href="{{ url_for('shop.catalogue', publisher=b.publisher) }}">{{ b.publisher }}</a></td></tr>
+      <tr><td>ISBN</td><td>{{ b.isbn or 'Not listed' }}</td></tr>
       <tr><td>Department</td><td><a href="{{ url_for('shop.catalogue', category=b.category_slug) }}">{{ b.category_name }}</a></td></tr>
-      <tr><td>Sold so far</td><td>{{ b.sold_count }} copies</td></tr>
+      <tr><td>Language</td><td>{{ b.language }}</td></tr>
+      <tr><td>Format</td><td>{{ b.format }}</td></tr>
+      <tr><td>Copies sold</td><td>{{ b.sold_count }}</td></tr>
     </table>
+    {% if offers %}
+    <div class="offers"><h3>Available offers</h3>
+      <ul>{% for o in offers %}<li><b>{{ o.code }}</b>: {{ o.percent }}% off{{ ' on orders above ' ~ (o.min_amount|money) if o.min_amount }}{{ ', up to ' ~ (o.max_discount|money) if o.max_discount }}</li>{% endfor %}</ul>
+    </div>{% endif %}
+    <div class="share small">
+      <button type="button" class="link-btn" style="color:var(--ink)" data-copy-link>Copy link</button>
+      <a href="https://wa.me/?text={{ (b.name ~ ' – ' ~ request.url)|urlencode }}" target="_blank" rel="noopener">Share on WhatsApp</a>
+    </div>
   </div>
 
   <aside class="buy-box">
     <div class="price-row"><span class="price">{{ b.price|money }}</span>
       {% if b.mrp and b.mrp > b.price %}<s class="mrp">{{ b.mrp|money }}</s><span class="chip">{{ off(b)|trim }}% off</span>{% endif %}</div>
-    <p class="small muted">Free delivery above ₹500.</p>
+    <p class="small muted">Inclusive of all taxes. Free delivery above {{ free_above|float|money }}.</p>
+
+    <form class="delivery" data-delivery>
+      <label for="pin">Check delivery</label>
+      <div class="coupon-form"><input id="pin" name="pincode" inputmode="numeric" maxlength="6" placeholder="Enter PIN code" value="{{ eta.pincode if eta else '' }}"><button class="btn btn-sm btn-ghost">Check</button></div>
+      <p class="small delivery-msg {{ 'ok' if eta }}" role="status">{% if eta %}Delivery to {{ eta.pincode }} by {{ eta.label }}. Cash on Delivery available.{% endif %}</p>
+    </form>
+
     {% if b.stock <= 0 %}
       <div class="stock out">Out of stock</div>
       <p class="small muted">Save it to your wishlist and check back soon.</p>
     {% else %}
-      <div class="stock {{ 'low' if b.stock <= 5 else 'in' }}">{{ 'Only %d left' % b.stock if b.stock <= 5 else 'In stock' }}</div>
-      <form method="post" action="{{ url_for('cart.add', book_id=b.id) }}" data-ajax-add>
+      <div class="stock {{ 'low' if b.stock <= 5 else 'in' }}">{{ 'Only %d left in stock' % b.stock if b.stock <= 5 else 'In stock' }}</div>
+      <form method="post" action="{{ url_for('cart.add', book_id=b.id) }}" data-ajax-add id="buy-form">
         {{ csrf() }}
         <div class="qty-pick"><label for="qty" style="margin:0">Quantity</label>
           <select id="qty" name="qty">{% for i in range(1, [b.stock, 10]|min + 1) %}<option>{{ i }}</option>{% endfor %}</select></div>
@@ -40,17 +66,30 @@
       </form>
     {% endif %}
     <div class="stack" style="margin-top:10px">
-      <button type="button" class="btn btn-ghost btn-block wish-btn-text" id="wish-text" data-id="{{ b.id }}">{{ 'Remove from wishlist' if b.id in wished else 'Save to wishlist' }}</button>
+      <button type="button" class="btn btn-ghost btn-block" id="wish-text" data-id="{{ b.id }}">{{ 'Remove from wishlist' if b.id in wished else 'Save to wishlist' }}</button>
     </div>
+    <ul class="assure small"><li>7-day returns after delivery</li><li>Genuine edition, securely packed</li></ul>
   </aside>
 </div>
+
+{% if b.stock > 0 %}
+<div class="sticky-buy" aria-hidden="true">
+  <div><b>{{ b.price|money }}</b>{% if b.mrp and b.mrp > b.price %} <s class="mrp">{{ b.mrp|money }}</s>{% endif %}</div>
+  <button type="button" class="btn btn-hl btn-sm" data-sticky-add>Add to cart</button>
+</div>
+{% endif %}
+
+{% if also %}
+<section class="section"><div class="section-head"><h2>Customers also bought</h2></div>
+  <div class="rail">{% for r in also %}{{ book_card(r, wished) }}{% endfor %}</div></section>
+{% endif %}
 
 <section class="section" id="reviews">
   <h2>Customer reviews</h2>
   <div class="reviews">
     <div>
-      <div class="avg">{{ '%.1f'|format(b.rating) if b.review_count else '—' }}</div>
-      {% if b.review_count %}{{ stars(b.rating) }}<p class="muted small">{{ b.review_count }} {{ 'review' if b.review_count == 1 else 'reviews' }}</p>{% else %}<p class="muted small">No reviews yet.</p>{% endif %}
+      <div class="avg">{{ '%.1f'|format(b.rating) if b.review_count else '–' }}</div>
+      {% if b.review_count %}{{ stars(b.rating) }}<p class="muted small">{{ b.review_count }} {{ 'review' if b.review_count == 1 else 'reviews' }}</p>{% else %}<p class="muted small">No reviews yet. Be the first to share what you think.</p>{% endif %}
       {% if b.review_count %}
       <div class="bars">{% for s in [5,4,3,2,1] %}
         <div class="bar-row"><span>{{ s }}★</span><div class="bar-track"><i style="width: {{ (dist[s] / b.review_count * 100)|round|int }}%"></i></div><span class="muted">{{ dist[s] }}</span></div>
@@ -84,6 +123,9 @@
           {% if r.title %}<h4>{{ r.title }}</h4>{% endif %}
           <div class="small muted">{{ r.fullname }} · {{ r.created_at|dt('%d %b %Y') }}{% if r.user_id in verified_ids %} · <span class="verified">Verified purchase</span>{% endif %}</div>
           {% if r.comment %}<p style="margin-top:6px">{{ r.comment }}</p>{% endif %}
+          {% if g.user and r.user_id != g.user.id %}
+            <button type="button" class="helpful {{ 'on' if r.voted }}" data-helpful="{{ r.id }}" aria-pressed="{{ 'true' if r.voted else 'false' }}">Helpful (<span>{{ r.helpful }}</span>)</button>
+          {% elif r.helpful %}<span class="small muted">{{ r.helpful }} found this helpful</span>{% endif %}
         </article>
       {% endfor %}
     </div>
@@ -91,10 +133,12 @@
 </section>
 
 {% if related %}
-<section class="section">
-  <h2>More in {{ b.category_name }}</h2>
-  <div class="grid">{% for r in related %}{{ book_card(r, wished) }}{% endfor %}</div>
-</section>
+<section class="section"><div class="section-head"><h2>More in {{ b.category_name }}</h2><a href="{{ url_for('shop.catalogue', category=b.category_slug) }}">See all</a></div>
+  <div class="rail">{% for r in related %}{{ book_card(r, wished) }}{% endfor %}</div></section>
+{% endif %}
+{% if recent %}
+<section class="section"><div class="section-head"><h2>Recently viewed</h2></div>
+  <div class="rail">{% for r in recent %}{{ book_card(r, wished) }}{% endfor %}</div></section>
 {% endif %}
 {% endblock %}
 {% block scripts %}

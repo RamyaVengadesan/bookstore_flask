@@ -1,0 +1,17 @@
+{% extends 'pages/_page.html' %}
+{% block title %}Contact us · {{ brand.name }}{% endblock %}
+{% block body %}
+{% from 'partials/macros.html' import csrf %}
+<h1>Contact us</h1>
+<p class="lead">Questions about an order or a book? Send us a message and we'll reply within one working day.</p>
+<form method="post" class="panel" novalidate>
+  {{ csrf() }}
+  <div class="grid-2">
+    <div class="field"><label for="name">Your name</label><input id="name" name="name" value="{{ form.get('name', '') }}" required autocomplete="name"></div>
+    <div class="field"><label for="email">Email</label><input id="email" type="email" name="email" value="{{ form.get('email', '') }}" required autocomplete="email"></div>
+  </div>
+  <div class="field"><label for="subject">Subject</label><input id="subject" name="subject" value="{{ form.get('subject', '') }}" required maxlength="150" placeholder="e.g. Where is my order?"></div>
+  <div class="field"><label for="body">Message</label><textarea id="body" name="body" required maxlength="3000" placeholder="Include your order number if you have one.">{{ form.get('body', '') }}</textarea></div>
+  <button class="btn">Send message</button>
+</form>
+{% endblock %}

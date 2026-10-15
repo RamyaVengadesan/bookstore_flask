@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% from 'partials/macros.html' import csrf %}
-{% block title %}Checkout · PU Book Store{% endblock %}
+{% block title %}Checkout · {{ brand.name }}{% endblock %}
 {% block content %}
+<ol class="stepper" aria-label="Checkout progress"><li class="done">Cart</li><li class="now">Address and payment</li><li>Confirmation</li></ol>
 <h1>Checkout</h1>
 <form method="post" class="two-col" novalidate>
   {{ csrf() }}

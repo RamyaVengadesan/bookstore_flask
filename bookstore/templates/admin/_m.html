@@ -1,0 +1,11 @@
+{% macro tabs(items, current, endpoint, key='status') %}
+<div class="adm-tabs">{% for label, val, n in items %}<a href="{{ url_for(endpoint, **({key: val} if val else {})) }}" class="{{ 'on' if current == val }}">{{ label }}{% if n is not none %} <em>{{ n }}</em>{% endif %}</a>{% endfor %}</div>
+{% endmacro %}
+{% macro delta(v) %}{% if v is not none %}<span class="delta {{ 'up' if v >= 0 else 'down' }}">{{ '▲' if v >= 0 else '▼' }} {{ v|abs }}% vs previous</span>{% else %}<span class="delta">no earlier data</span>{% endif %}{% endmacro %}
+{% macro bars(chart) %}
+<svg class="chart-svg" viewBox="0 0 {{ chart.w }} {{ chart.h }}" role="img" aria-label="Revenue per day">
+  {% for g in chart.grid %}<line x1="{{ chart.left }}" x2="{{ chart.w - 8 }}" y1="{{ g.y }}" y2="{{ g.y }}" class="grid"/><text x="{{ chart.left - 8 }}" y="{{ g.y + 4 }}" text-anchor="end" class="axis">{{ g.label }}</text>{% endfor %}
+  {% for b in chart.bars %}<rect x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}" rx="2" class="bar"><title>{{ b.tip }}</title></rect>{% endfor %}
+  {% for l in chart.labels %}<text x="{{ l.x }}" y="{{ chart.h - 8 }}" text-anchor="middle" class="axis">{{ l.t }}</text>{% endfor %}
+</svg>
+{% endmacro %}

@@ -1,36 +1,43 @@
 {% extends 'base.html' %}
-{% from 'partials/macros.html' import book_card %}
+{% from 'partials/macros.html' import book_card, cover %}
 {% block content %}
-<section class="hero">
-  <div>
-    <h1>Textbooks for the <mark>semester ahead</mark>, shelved by department.</h1>
-    <p class="lead">Pick your branch, find the book your syllabus names, and have it at your door. Genuine editions from Pearson, Wiley, McGraw Hill and more.</p>
-    <div class="hero-cta">
-      <a class="btn btn-hl" href="{{ url_for('shop.catalogue') }}">Browse all books</a>
-      {% if not g.user %}<a class="btn btn-ghost" href="{{ url_for('auth.register') }}">Create an account</a>{% endif %}
-    </div>
-    <div class="hero-stats">
-      <div><b>{{ stats.books }}</b>titles in stock</div>
-      <div><b>{{ stats.copies }}</b>copies ready to ship</div>
-      <div><b>₹500+</b>ships free</div>
-    </div>
-  </div>
-  <div class="shelf" role="navigation" aria-label="Shop by department">
-    {% set heights = [250, 300, 270, 320] %}
-    {% for c in cat_counts %}
-      <a class="spine cc{{ c.id % 6 }}" style="height: {{ heights[loop.index0 % 4] }}px; width: 64px" href="{{ url_for('shop.catalogue', category=c.slug) }}" title="{{ c.n }} books"><span>{{ c.name }}</span></a>
-      <a class="spine plain cc{{ (c.id + 2) % 6 }}" style="height: {{ heights[(loop.index0 + 2) % 4] - 50 }}px" href="{{ url_for('shop.catalogue', category=c.slug) }}" tabindex="-1" aria-hidden="true"><span>{{ c.n }} titles</span></a>
+<h1 class="sr-only">{{ brand.name }}: {{ brand.tagline }}</h1>
+
+{% if banners %}
+<section class="hero-carousel" aria-roledescription="carousel" aria-label="Featured offers" data-carousel>
+  <div class="slides">
+    {% for b in banners %}
+    <article class="slide bn-{{ b.theme }} {{ 'active' if loop.first }}" aria-roledescription="slide" aria-label="{{ loop.index }} of {{ banners|length }}" {{ '' if loop.first else 'aria-hidden=true' }}>
+      <div class="slide-copy">
+        <h2>{{ b.title }}</h2>
+        {% if b.subtitle %}<p>{{ b.subtitle }}</p>{% endif %}
+        <a class="btn btn-hl" href="{{ b.link }}" {{ '' if loop.first else 'tabindex=-1' }}>{{ b.cta_text }}</a>
+      </div>
+      <div class="slide-art" aria-hidden="true">
+        {% for c in b.covers %}<a class="art-cover a{{ loop.index }}" href="{{ url_for('shop.book', book_id=c.id) }}" tabindex="-1">{{ cover(c) }}</a>{% endfor %}
+      </div>
+    </article>
     {% endfor %}
   </div>
+  {% if banners|length > 1 %}
+  <button class="car-btn prev" type="button" aria-label="Previous offer">‹</button>
+  <button class="car-btn next" type="button" aria-label="Next offer">›</button>
+  <div class="dots" role="tablist" aria-label="Choose offer">
+    {% for b in banners %}<button type="button" role="tab" aria-label="Offer {{ loop.index }}" aria-selected="{{ 'true' if loop.first else 'false' }}"></button>{% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="trust" aria-label="Why shop with us">
+  <div><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.500" r="1.800"/><circle cx="17" cy="17.500" r="1.800"/></svg><span><b>Free delivery</b>on orders above ₹500</span></div>
+  <div><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 1 0 3-6.200M4 4v4h4"/></svg><span><b>Easy returns</b>7 days after delivery</span></div>
+  <div><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 5-3.500 8-8 9-4.500-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><span><b>Secure checkout</b>UPI, cards or cash on delivery</span></div>
+  <div><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM8 20a3 3 0 0 1-3-3"/></svg><span><b>Genuine editions</b>from trusted publishers</span></div>
 </section>
 
 <section class="section">
-  <div class="section-head"><h2>Best sellers</h2><a href="{{ url_for('shop.catalogue', sort='relevance') }}">See all</a></div>
-  <div class="grid">{% for b in bestsellers %}{{ book_card(b, wished) }}{% endfor %}</div>
-</section>
-
-<section class="section">
-  <div class="section-head"><h2>Shop by department</h2></div>
+  <div class="section-head"><h2>Browse by department</h2><a href="{{ url_for('shop.catalogue') }}">View all {{ cat_counts|sum(attribute='n') }} books</a></div>
   <div class="cat-tiles">
     {% for c in cat_counts %}
       <a class="cat-tile cc{{ c.id % 6 }}" href="{{ url_for('shop.catalogue', category=c.slug) }}"><div><b>{{ c.name }}</b><span class="muted">{{ c.n }} books</span></div></a>
@@ -38,19 +45,50 @@
   </div>
 </section>
 
+{% if deals %}
 <section class="section">
-  <div class="section-head"><h2>Top rated</h2><a href="{{ url_for('shop.catalogue', sort='rating') }}">See all</a></div>
-  <div class="grid">{% for b in top_rated %}{{ book_card(b, wished) }}{% endfor %}</div>
+  <div class="section-head">
+    <div class="head-with-timer"><h2>Deals of the day</h2><span class="timer" data-countdown aria-label="Time left today">Ends in <b>--:--:--</b></span></div>
+    <a href="{{ url_for('shop.deals') }}">See all deals</a>
+  </div>
+  <div class="rail">{% for b in deals %}{{ book_card(b, wished) }}{% endfor %}</div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head"><h2>Trending now</h2></div>
+  <div class="tabs" role="tablist" data-tabs>
+    {% for group in trending %}<button type="button" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" data-tab="t{{ loop.index }}">{{ group }}</button>{% endfor %}
+  </div>
+  {% for group, books in trending.items() %}
+  <div class="tab-panel" id="t{{ loop.index }}" role="tabpanel" {{ 'hidden' if not loop.first }}>
+    <div class="rail four">{% for b in books %}{{ book_card(b, wished) }}{% endfor %}</div>
+    <p class="tab-more"><a href="{{ url_for('shop.catalogue', group=group) }}">See all in {{ group }}</a></p>
+  </div>
+  {% endfor %}
 </section>
 
 <section class="section">
-  <div class="section-head"><h2>Just added</h2><a href="{{ url_for('shop.catalogue', sort='newest') }}">See all</a></div>
-  <div class="grid">{% for b in newest %}{{ book_card(b, wished) }}{% endfor %}</div>
+  <div class="section-head"><h2>Highest rated</h2><a href="{{ url_for('shop.catalogue', sort='rating') }}">See all</a></div>
+  <div class="rail">{% for b in top_rated %}{{ book_card(b, wished) }}{% endfor %}</div>
 </section>
 
-<section class="section perks">
-  <div class="perk"><b>Free delivery above ₹500</b><span class="muted">Smaller orders ship for ₹40.</span></div>
-  <div class="perk"><b>Cancel before it ships</b><span class="muted">Stock returns to the shelf and any online payment is refunded.</span></div>
-  <div class="perk"><b>Track every order</b><span class="muted">See each step from Pending to Delivered in your account.</span></div>
+<section class="section authors-band">
+  <div class="section-head"><h2>Popular authors</h2></div>
+  <div class="author-chips">
+    {% for a in authors %}<a href="{{ url_for('shop.catalogue', author=a.author) }}"><span class="avatar cc{{ loop.index % 6 }}">{{ a.author[0] }}</span>{{ a.author }}</a>{% endfor %}
+  </div>
 </section>
+
+<section class="section">
+  <div class="section-head"><h2>New arrivals</h2><a href="{{ url_for('shop.new_arrivals') }}">See all</a></div>
+  <div class="rail">{% for b in newest %}{{ book_card(b, wished) }}{% endfor %}</div>
+</section>
+
+{% if recent %}
+<section class="section">
+  <div class="section-head"><h2>Recently viewed</h2></div>
+  <div class="rail">{% for b in recent %}{{ book_card(b, wished) }}{% endfor %}</div>
+</section>
+{% endif %}
 {% endblock %}

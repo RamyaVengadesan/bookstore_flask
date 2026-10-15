@@ -1,0 +1,10 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf, icon %}
+{% block title %}Subscribers{% endblock %}
+{% block actions %}<a class="btn btn-ghost btn-sm" href="{{ url_for('admin.export', kind='subscribers') }}">{{ icon('download', 15) }} Export CSV</a>{% endblock %}
+{% block content %}
+<p class="muted">{{ total }} newsletter subscriber{{ 's' if total != 1 }}.</p>
+<div class="table-wrap"><table class="data"><thead><tr><th>Email</th><th>Subscribed</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ r.email }}</td><td>{{ r.created_at|dt('%d %b %Y') }}</td><td><form method="post" action="{{ url_for('admin.subscriber_delete', sid=r.id) }}" data-confirm="Remove {{ r.email }}?">{{ csrf() }}<button class="btn btn-danger btn-sm">Remove</button></form></td></tr>
+{% else %}<tr><td colspan="3" class="muted">No subscribers yet.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

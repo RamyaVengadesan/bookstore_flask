@@ -1,0 +1,28 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf, badge, icon %}
+{% block title %}Returns{% endblock %}
+{% block actions %}<a class="btn btn-ghost btn-sm" href="{{ url_for('admin.export', kind='returns') }}">{{ icon('download', 15) }} Export CSV</a>{% endblock %}
+{% block content %}
+<div class="adm-tabs">
+  <a href="{{ url_for('admin.returns') }}" class="{{ 'on' if not status }}">All <em>{{ counts.values()|sum }}</em></a>
+  {% for s in statuses %}<a href="{{ url_for('admin.returns', status=s) }}" class="{{ 'on' if status == s }}">{{ s }} <em>{{ counts.get(s, 0) }}</em></a>{% endfor %}
+</div>
+{% for r in rows %}
+<section class="panel ret-card">
+  <div class="ret-head">
+    <div><a href="{{ url_for('admin.order', order_id=r.order_id) }}"><b>{{ order_ref(r.order_id) }}</b></a> · {{ r.fullname }} <span class="muted small">· requested {{ r.created_at|dt('%d %b, %I:%M %p') }}</span></div>
+    <div>{{ badge(r.status) }}</div>
+  </div>
+  <p class="muted small" style="margin:6px 0">{{ r.items }} · order total {{ r.total|money }}</p>
+  <p style="margin:0"><b>{{ r.reason }}</b>{% if r.details %}: {{ r.details }}{% endif %}</p>
+  {% if r.admin_note %}<p class="small muted" style="margin:6px 0 0">Our note: {{ r.admin_note }}</p>{% endif %}
+  {% if next[r.status] %}
+  <form method="post" action="{{ url_for('admin.return_update', rid=r.id) }}" class="ret-actions">
+    {{ csrf() }}
+    <input name="note" maxlength="300" placeholder="Note to the customer (required to reject)" aria-label="Note">
+    {% if 'Refunded' in next[r.status] %}<label class="check small"><input type="checkbox" name="restock" value="1" checked> Return books to stock</label>{% endif %}
+    {% for n in next[r.status] %}<button class="btn btn-sm {{ 'btn-danger' if n == 'Rejected' }}" name="status" value="{{ n }}">{{ {'Approved': 'Approve', 'Rejected': 'Reject', 'Refunded': 'Mark refunded'}[n] }}</button>{% endfor %}
+  </form>{% endif %}
+</section>
+{% else %}<div class="empty"><h2>No return requests</h2><p class="muted">Requests from customers will appear here.</p></div>{% endfor %}
+{% endblock %}

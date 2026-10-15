@@ -1,10 +1,13 @@
 {% extends 'base.html' %}
-{% block title %}Order placed · PU Book Store{% endblock %}
+{% block title %}Order placed · {{ brand.name }}{% endblock %}
 {% block content %}
+<ol class="stepper" aria-label="Checkout progress"><li class="done">Cart</li><li class="done">Address and payment</li><li class="now">Confirmation</li></ol>
 <div class="success-box">
   <div class="tick" aria-hidden="true">✓</div>
   <h1>Order placed</h1>
   <p class="muted">Your order <b>{{ order_ref(o.id) }}</b> is confirmed for {{ o.total|money }} ({{ o.payment_method }}). We'll ship it to {{ o.ship_name }}.</p>
+  {% if eta %}<p class="eta">Estimated delivery by <b>{{ eta.label }}</b></p>{% endif %}
+  <p class="small muted">A confirmation email has been sent to {{ g.user.email }}.</p>
   <p><a class="btn" href="{{ url_for('orders.detail', order_id=o.id) }}">Track this order</a>
      <a class="btn btn-ghost" href="{{ url_for('shop.catalogue') }}">Keep shopping</a></p>
 </div>

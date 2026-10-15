@@ -8,7 +8,7 @@
   button{padding:8px 16px;margin-bottom:16px}@media print{button{display:none}}
 </style></head><body>
 <button onclick="window.print()">Print invoice</button>
-<div class="top"><div><h1>PU Book Store</h1>Tax invoice</div><div style="text-align:right"><b>{{ order_ref(o.id) }}</b><br>{{ o.created_at|dt('%d %b %Y') }}</div></div>
+<div class="top"><div><h1>{{ brand.name }}</h1>Tax invoice</div><div style="text-align:right"><b>{{ order_ref(o.id) }}</b><br>{{ o.created_at|dt('%d %b %Y') }}</div></div>
 <p><b>Billed and shipped to</b><br>{{ o.ship_name }}<br>{{ o.ship_address }}<br>Phone {{ o.ship_phone }}<br>{{ customer.email }}</p>
 <table><thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Amount</th></tr></thead><tbody>
 {% for i in items %}<tr><td>{{ i.title }}<br><small>{{ i.author }}</small></td><td>{{ i.price|money }}</td><td>{{ i.qty }}</td><td>{{ (i.price*i.qty)|money }}</td></tr>{% endfor %}

@@ -1,12 +1,15 @@
 """Registration, login/logout, account page (profile, password, addresses)."""
+import hashlib
 import re
+import secrets
 import sqlite3
+from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from ..db import execute, get_db, query
-from ..utils import login_required, merge_guest_cart, safe_next
+from ..utils import login_required, merge_guest_cart, safe_next, send_email
 
 bp = Blueprint("auth", __name__)
 
@@ -60,7 +63,7 @@ def register():
                 errors.append("That username or email is already registered.")
             else:
                 _start_session({"id": uid})
-                flash(f"Welcome to PU Book Store, {form['fullname'].split()[0]}!", "success")
+                flash(f"Welcome to {current_app.config['STORE_NAME']}, {form['fullname'].split()[0]}!", "success")
                 return redirect(url_for("shop.home"))
         for e in errors:
             flash(e, "error")
@@ -89,6 +92,61 @@ def logout():
     session.clear()
     flash("You have been logged out.", "info")
     return redirect(url_for("shop.home"))
+
+
+# ------------------------------------------------------------------ password reset
+def _hash(token):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+@bp.route("/forgot", methods=["GET", "POST"])
+def forgot():
+    link = None
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        user = query("SELECT * FROM users WHERE email=?", (email,), one=True) if EMAIL_RE.match(email) else None
+        if user:
+            token = secrets.token_urlsafe(32)
+            expires = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+            execute("INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?,?,?)",
+                    (user["id"], _hash(token), expires))
+            link = url_for("auth.reset", token=token, _external=True)
+            send_email(user["email"], f"Reset your {current_app.config['STORE_NAME']} password",
+                       f"Hi {user['fullname'].split()[0]},\n\nUse this link to choose a new password (valid for 1 hour):\n"
+                       f"{link}\n\nIf you didn't ask for this, you can ignore this email.")
+        flash("If that email is registered, we've sent a link to reset your password.", "info")
+        if not current_app.config["DEMO_SHOW_RESET_LINK"]:
+            link = None
+    return render_template("auth/forgot.html", link=link)
+
+
+def _valid_reset(token):
+    row = query("SELECT * FROM password_resets WHERE token_hash=? AND used=0", (_hash(token),), one=True)
+    if row and row["expires_at"] >= datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"):
+        return row
+    return None
+
+
+@bp.route("/reset/<token>", methods=["GET", "POST"])
+def reset(token):
+    row = _valid_reset(token)
+    if row is None:
+        flash("That reset link is invalid or has expired. Please request a new one.", "error")
+        return redirect(url_for("auth.forgot"))
+    if request.method == "POST":
+        pw, pw2 = request.form.get("password", ""), request.form.get("confirm", "")
+        errors = _password_errors(pw) + (["Passwords do not match."] if pw != pw2 else [])
+        if errors:
+            for e in errors:
+                flash(e, "error")
+        else:
+            db = get_db()
+            db.execute("UPDATE users SET password=? WHERE id=?", (generate_password_hash(pw), row["user_id"]))
+            db.execute("UPDATE password_resets SET used=1 WHERE user_id=?", (row["user_id"],))
+            db.commit()
+            flash("Your password has been changed. You can log in now.", "success")
+            return redirect(url_for("auth.login"))
+    return render_template("auth/reset.html", token=token)
 
 
 # ------------------------------------------------------------------ account

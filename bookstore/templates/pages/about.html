@@ -1,0 +1,14 @@
+{% extends 'pages/_page.html' %}
+{% block body %}
+<h1>About {{ brand.name }}</h1>
+<p class="lead">{{ brand.name }} is an online bookstore for people who read for class, for exams and for fun.</p>
+<p>We started with engineering textbooks, the books students are told to buy and then struggle to find. Today the shelves also hold science and maths, management and finance, competitive exam guides, fiction, self-help, biographies and children's books.</p>
+<h2>What we care about</h2>
+<ul>
+  <li><b>The right edition.</b> Titles list the publisher, language and format so you can match them to your syllabus.</li>
+  <li><b>Honest prices.</b> You see the list price, the selling price and the discount, with delivery charges shown before you check out.</li>
+  <li><b>Easy when things go wrong.</b> Cancel before shipping, or return within {{ 7 }} days of delivery.</li>
+</ul>
+<h2>Get in touch</h2>
+<p>Questions about an order or a book? <a href="{{ url_for('shop.contact') }}">Send us a message</a> and we'll reply within one working day.</p>
+{% endblock %}

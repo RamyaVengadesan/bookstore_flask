@@ -1,0 +1,71 @@
+{% from 'partials/macros.html' import icon %}
+{% set ac = admin_counts() %}
+{% set ep = current_endpoint or '' %}
+{% macro nav(endpoint, label, ico, count=0, match=[]) %}<a href="{{ url_for(endpoint) }}" class="{{ 'on' if ep == endpoint or ep in match }}">{{ icon(ico, 18) }}<span>{{ label }}</span>{% if count %}<em>{{ count }}</em>{% endif %}</a>{% endmacro %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="robots" content="noindex">
+  <title>{% block title %}Admin{% endblock %} · {{ brand.name }} Admin</title>
+  <script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/mark.svg') }}">
+</head>
+<body class="adm">
+<a class="skip" href="#main">Skip to content</a>
+<div class="adm-shell">
+  <aside class="adm-side" id="adm-side" aria-label="Admin navigation">
+    <a class="adm-brand" href="{{ url_for('admin.dashboard') }}"><img src="{{ url_for('static', filename='img/mark.svg') }}" width="30" height="30" alt=""><span>{{ brand.name|lower }}<b>.</b></span><small>admin</small></a>
+    <nav>
+      <h6>Overview</h6>
+      {{ nav('admin.dashboard', 'Dashboard', 'home') }}
+      {{ nav('admin.reports', 'Reports', 'chart') }}
+      <h6>Catalogue</h6>
+      {{ nav('admin.books', 'Books', 'book', match=['admin.book_new','admin.book_edit']) }}
+      {{ nav('admin.books_import', 'Import books', 'upload') }}
+      {{ nav('admin.categories', 'Departments', 'grid') }}
+      {{ nav('admin.banners', 'Banners', 'image', match=['admin.banner_form']) }}
+      <h6>Sales</h6>
+      {{ nav('admin.orders', 'Orders', 'box', ac.orders, match=['admin.order']) }}
+      {{ nav('admin.returns', 'Returns', 'return', ac.returns) }}
+      {{ nav('admin.coupons', 'Coupons', 'tag') }}
+      <h6>Customers</h6>
+      {{ nav('admin.users', 'Customers', 'users', match=['admin.user_detail']) }}
+      {{ nav('admin.reviews', 'Reviews', 'star') }}
+      {{ nav('admin.messages', 'Inbox', 'inbox', ac.messages) }}
+      {{ nav('admin.subscribers', 'Subscribers', 'mail') }}
+      <h6>System</h6>
+      {{ nav('admin.settings', 'Settings', 'gear') }}
+      {{ nav('admin.activity', 'Activity log', 'clock') }}
+    </nav>
+    <a class="adm-store" href="{{ url_for('shop.home') }}" target="_blank" rel="noopener">View storefront {{ icon('chev', 14) }}</a>
+  </aside>
+  <div class="adm-scrim" id="adm-scrim"></div>
+  <div class="adm-main">
+    <header class="adm-top">
+      <button class="icon-btn adm-burger" type="button" id="adm-burger" aria-label="Open menu">{{ icon('menu') }}</button>
+      <div class="adm-title"><h1>{% block page_title %}{{ self.title() }}{% endblock %}</h1></div>
+      <div class="adm-top-actions">{% block actions %}{% endblock %}</div>
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch light or dark theme"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <div class="menu"><button class="menu-btn adm-user" type="button" aria-haspopup="true" aria-expanded="false">{{ g.user.fullname.split()[0] }}</button>
+        <div class="menu-list" hidden><a href="{{ url_for('auth.account') }}">My account</a><a href="{{ url_for('shop.home') }}">Storefront</a>
+          <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button>Log out</button></form></div></div>
+    </header>
+    <div class="toasts" id="toasts" aria-live="polite">
+      {% for cat, msg in get_flashed_messages(with_categories=true) %}<div class="toast {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
+    </div>
+    <main id="main" class="adm-content">{% block content %}{% endblock %}</main>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

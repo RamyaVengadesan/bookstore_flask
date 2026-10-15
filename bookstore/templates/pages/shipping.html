@@ -1,0 +1,12 @@
+{% extends 'pages/_page.html' %}
+{% block body %}
+<h1>Shipping and delivery</h1>
+<h2>Delivery charges</h2>
+<p>Orders of {{ free_above|float|money }} or more (after any coupon) ship free. Orders below {{ free_above|float|money }} pay a flat delivery charge of {{ ship_fee|float|money }}.</p>
+<h2>Delivery time</h2>
+<p>We estimate 2 to 5 working days from the day you order, depending on your PIN code. We do not deliver on Sundays. Enter your PIN code on any book page for an estimated delivery date.</p>
+<h2>Tracking</h2>
+<p>Every order moves through Pending, Confirmed, Shipped, Out for delivery and Delivered. Follow it any time from <a href="{{ url_for('orders.history') }}">My orders</a>, where each update is time-stamped.</p>
+<h2>Cash on Delivery</h2>
+<p>Pay the delivery partner when your order arrives. Please keep the exact amount ready.</p>
+{% endblock %}

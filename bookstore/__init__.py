@@ -1,11 +1,12 @@
 import os
 import secrets
+from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, g, render_template, request
 
 from . import db as database
-from .utils import (cart_count, check_csrf, csrf_token, load_user, local_dt, money,
+from .utils import (all_settings, cart_count, check_csrf, cover_url, csrf_token, load_user, local_dt, money,
                     order_ref)
 
 
@@ -21,6 +22,18 @@ def create_app(test_config=None):
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         PER_PAGE=12,
+        # Brand: change here or with environment variables to rename the whole store.
+        STORE_NAME=os.environ.get("STORE_NAME", "Readora"),
+        STORE_TAGLINE=os.environ.get("STORE_TAGLINE", "Books for every reader"),
+        ORDER_PREFIX=os.environ.get("ORDER_PREFIX", "RD"),
+        # Email: leave MAIL_SERVER empty to print emails to the console while developing.
+        MAIL_SERVER=os.environ.get("MAIL_SERVER", ""),
+        MAIL_PORT=int(os.environ.get("MAIL_PORT", 587)),
+        MAIL_USERNAME=os.environ.get("MAIL_USERNAME", ""),
+        MAIL_PASSWORD=os.environ.get("MAIL_PASSWORD", ""),
+        MAIL_FROM=os.environ.get("MAIL_FROM", ""),
+        # Demo only: show the password-reset link on screen. Set to False in production.
+        DEMO_SHOW_RESET_LINK=os.environ.get("DEMO_SHOW_RESET_LINK", "1") == "1",
     )
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or _persistent_secret(app.instance_path)
     if test_config:
@@ -28,11 +41,8 @@ def create_app(test_config=None):
 
     database.init_app(app)
 
-    # DB is created on first run so `python run.py` just works.
-    if not os.path.exists(app.config["DATABASE"]):
-        with app.app_context():
-            database.init_db()
-            database.create_admin("admin", os.environ.get("ADMIN_PASSWORD", "admin123"))
+    # DB is created on first run so `python run.py` just works (older schemas are backed up and rebuilt).
+    database.ensure_db(app)
 
     from .routes import admin, auth, cart, orders, shop
     for bp in (shop.bp, auth.bp, cart.bp, orders.bp, admin.bp):
@@ -43,13 +53,26 @@ def create_app(test_config=None):
 
     app.jinja_env.filters["money"] = money
     app.jinja_env.filters["dt"] = local_dt
-    app.jinja_env.globals.update(csrf_token=csrf_token, order_ref=order_ref)
+    app.jinja_env.globals.update(csrf_token=csrf_token, order_ref=order_ref, cover_url=cover_url)
+
+    def admin_counts():
+        q = database.query
+        return {"returns": q("SELECT COUNT(*) n FROM returns WHERE status='Requested'")[0]["n"],
+                "messages": q("SELECT COUNT(*) n FROM messages WHERE status='New'")[0]["n"],
+                "orders": q("SELECT COUNT(*) n FROM orders WHERE status='Pending'")[0]["n"]}
+    app.jinja_env.globals["admin_counts"] = admin_counts
 
     @app.context_processor
     def inject():
-        cats = database.query("SELECT * FROM categories ORDER BY name")
-        return {"nav_categories": cats, "cart_count": cart_count(),
-                "current_endpoint": request.endpoint}
+        cats = database.query("SELECT * FROM categories ORDER BY sort_order, name")
+        groups = {}
+        for c in cats:
+            groups.setdefault(c["group_name"], []).append(c)
+        return {"nav_categories": cats, "nav_groups": groups, "cart_count": cart_count(),
+                "current_endpoint": request.endpoint, "year": datetime.now().year,
+                "store": all_settings(), "free_above": all_settings()["free_above"], "ship_fee": all_settings()["ship_fee"],
+                "brand": {"name": all_settings()["store_name"] or app.config["STORE_NAME"],
+                          "tagline": all_settings()["tagline"] or app.config["STORE_TAGLINE"]}}
 
     @app.after_request
     def headers(resp):

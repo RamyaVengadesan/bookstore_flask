@@ -3,7 +3,7 @@ from flask import Blueprint, abort, jsonify, redirect, render_template, request,
 
 from ..db import query
 from ..utils import (MAX_QTY_PER_BOOK, cart_count, cart_get_qty, cart_items, cart_set, compute_totals,
-                     money, reply, validate_coupon, wants_json, FREE_SHIPPING_ABOVE, SHIPPING_FEE)
+                     money, reply, validate_coupon, wants_json, shipping_rules)
 
 bp = Blueprint("cart", __name__)
 
@@ -27,7 +27,7 @@ def view():
     items = cart_items()
     totals = compute_totals(items)
     return render_template("cart.html", items=items, t=totals, max_qty=MAX_QTY_PER_BOOK,
-                           free_above=FREE_SHIPPING_ABOVE, ship_fee=SHIPPING_FEE,
+                           free_above=shipping_rules()[0], ship_fee=shipping_rules()[1],
                            coupons=query("SELECT * FROM coupons WHERE active=1 ORDER BY percent"))
 
 

@@ -1,12 +1,20 @@
-{% extends 'base.html' %}
-{% from 'partials/macros.html' import admin_nav, csrf %}
-{% block title %}Categories · Admin{% endblock %}
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf %}
+{% block title %}Departments{% endblock %}
 {% block content %}
-<h1>Categories</h1>{{ admin_nav('cats') }}
-<form method="post" class="panel" style="margin-bottom:18px;max-width:520px">{{ csrf() }}
+<form method="post" class="panel" style="margin-bottom:18px">{{ csrf() }}
   <h3>Add a department</h3>
-  <div class="coupon-form"><input name="name" placeholder="e.g. Mechanical Engineering" required aria-label="Department name"><button class="btn btn-sm">Add</button></div>
+  <div class="filterbar" style="margin:0"><input name="name" placeholder="e.g. Poetry" required aria-label="Department name">
+    <input name="group_name" list="groups" placeholder="Menu group, e.g. Fiction" aria-label="Menu group"><datalist id="groups">{% for g in groups %}<option value="{{ g }}">{% endfor %}</datalist>
+    <button class="btn btn-sm">Add</button></div>
 </form>
-<div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>URL name</th><th class="num">Books</th></tr></thead>
-  <tbody>{% for c in cats %}<tr><td><b>{{ c.name }}</b></td><td>{{ c.slug }}</td><td class="num">{{ c.n }}</td></tr>{% endfor %}</tbody></table></div>
+<div class="table-wrap"><table class="data"><thead><tr><th>Name</th><th>Menu group</th><th>Order</th><th class="num">Books</th><th></th></tr></thead>
+  <tbody>{% for c in cats %}<tr>
+    <form method="post" action="{{ url_for('admin.category_update', cid=c.id) }}" id="cf{{ c.id }}">{{ csrf() }}</form>
+    <td><input form="cf{{ c.id }}" name="name" value="{{ c.name }}" aria-label="Name"><div class="small muted">/{{ c.slug }}</div></td>
+    <td><input form="cf{{ c.id }}" name="group_name" value="{{ c.group_name }}" list="groups" aria-label="Group"></td>
+    <td><input form="cf{{ c.id }}" name="sort_order" type="number" value="{{ c.sort_order }}" style="width:80px" aria-label="Order"></td>
+    <td class="num">{{ c.n }}</td>
+    <td><div class="row-actions"><button form="cf{{ c.id }}" class="btn btn-ghost btn-sm">Save</button>
+      <form method="post" action="{{ url_for('admin.category_delete', cid=c.id) }}" data-confirm="Delete {{ c.name }}?">{{ csrf() }}<button class="btn btn-danger btn-sm" {{ 'disabled' if c.n }} title="{{ 'Move its books first' if c.n }}">Delete</button></form></div></td></tr>{% endfor %}</tbody></table></div>
 {% endblock %}

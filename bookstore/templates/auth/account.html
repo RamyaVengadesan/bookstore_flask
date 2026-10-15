@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% from 'partials/macros.html' import csrf %}
-{% block title %}My account · PU Book Store{% endblock %}
+{% block title %}My account · {{ brand.name }}{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>My account</h1><span class="muted">@{{ g.user.username }} · {{ stats.orders }} orders · {{ stats.spent|money }} spent</span></div></div>
 <div class="account-grid">

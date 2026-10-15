@@ -1,13 +1,18 @@
 """Checkout, order history, order tracking, cancellation and printable invoice."""
-from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
+import re
+from datetime import datetime, timedelta, timezone
+
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, url_for
 
 from ..db import get_db, query
-from ..utils import (CANCELLABLE, ORDER_FLOW, add_event, cart_clear, cart_items, compute_totals,
-                     login_required, restock_order)
+from ..utils import (CANCELLABLE, RETURN_WINDOW_DAYS, ORDER_FLOW, add_event, cart_clear, cart_items, cart_set,
+                     compute_totals, delivery_info, login_required, order_ref, restock_order, send_email)
 from .auth import validate_address
 
 bp = Blueprint("orders", __name__)
 
+RETURN_REASONS = ["Damaged or defective", "Wrong item received", "Item not as described",
+                  "Ordered by mistake", "Other"]
 PAYMENT_METHODS = {
     "cod": "Cash on Delivery",
     "upi": "UPI (demo)",
@@ -79,6 +84,9 @@ def checkout():
             flash(str(e), "error")
             return redirect(url_for("cart.view"))
         cart_clear()
+        send_email(g.user["email"], f"Your {current_app.config['STORE_NAME']} order {order_ref(oid)} is confirmed",
+                   f"Hi {g.user['fullname'].split()[0]},\n\nThanks for your order. Total: Rs {totals['total']:.0f} "
+                   f"({PAYMENT_METHODS[method]}).\nTrack it any time: {url_for('orders.detail', order_id=oid, _external=True)}")
         return redirect(url_for("orders.success", order_id=oid))
 
     return render_template("checkout.html", items=items, t=totals, addresses=addresses,
@@ -95,28 +103,54 @@ def _get_order(order_id):
 @bp.route("/orders/<int:order_id>/success")
 @login_required
 def success(order_id):
-    return render_template("order_success.html", o=_get_order(order_id))
+    o = _get_order(order_id)
+    return render_template("order_success.html", o=o, eta=_order_eta(o))
+
+
+def _order_eta(o):
+    m = re.search(r"\b(\d{6})\s*$", o["ship_address"])
+    placed = datetime.strptime(o["created_at"], "%Y-%m-%d %H:%M:%S").date()
+    return delivery_info(m.group(1), start=placed) if m else None
+
+
+def _return_state(o):
+    """(existing return row, eligible?) for an order."""
+    ret = query("SELECT * FROM returns WHERE order_id=?", (o["id"],), one=True)
+    eligible = False
+    if o["status"] == "Delivered" and ret is None:
+        ev = query("SELECT created_at FROM order_events WHERE order_id=? AND status='Delivered' ORDER BY id DESC",
+                   (o["id"],), one=True)
+        if ev:
+            when = datetime.strptime(ev["created_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            eligible = datetime.now(timezone.utc) - when <= timedelta(days=RETURN_WINDOW_DAYS)
+    return ret, eligible
 
 
 @bp.route("/orders")
 @login_required
 def history():
+    status = request.args.get("status", "all")
+    extra = {"active": " AND o.status NOT IN ('Delivered','Cancelled')", "delivered": " AND o.status='Delivered'",
+             "cancelled": " AND o.status='Cancelled'"}.get(status, "")
     orders = query("""SELECT o.*, (SELECT SUM(qty) FROM order_items WHERE order_id=o.id) n_items
-                      FROM orders o WHERE user_id=? ORDER BY o.id DESC""", (g.user["id"],))
-    previews = {o["id"]: query("""SELECT oi.title, b.image FROM order_items oi LEFT JOIN books b ON b.id=oi.book_id
+                      FROM orders o WHERE user_id=?""" + extra + " ORDER BY o.id DESC", (g.user["id"],))
+    previews = {o["id"]: query("""SELECT oi.title, b.image, b.isbn FROM order_items oi LEFT JOIN books b ON b.id=oi.book_id
                                   WHERE oi.order_id=? LIMIT 3""", (o["id"],)) for o in orders}
-    return render_template("orders.html", orders=orders, previews=previews)
+    return render_template("orders.html", orders=orders, previews=previews, status=status)
 
 
 @bp.route("/orders/<int:order_id>")
 @login_required
 def detail(order_id):
     o = _get_order(order_id)
-    items = query("""SELECT oi.*, b.image FROM order_items oi LEFT JOIN books b ON b.id=oi.book_id
+    items = query("""SELECT oi.*, b.image, b.isbn FROM order_items oi LEFT JOIN books b ON b.id=oi.book_id
                      WHERE oi.order_id=?""", (order_id,))
     events = query("SELECT * FROM order_events WHERE order_id=? ORDER BY id", (order_id,))
+    ret, can_return = _return_state(o)
     return render_template("order_detail.html", o=o, items=items, events=events, flow=ORDER_FLOW,
-                           can_cancel=o["status"] in CANCELLABLE)
+                           can_cancel=o["status"] in CANCELLABLE, ret=ret, can_return=can_return,
+                           eta=_order_eta(o) if o["status"] not in ("Delivered", "Cancelled") else None,
+                           return_days=RETURN_WINDOW_DAYS)
 
 
 @bp.route("/orders/<int:order_id>/invoice")
@@ -145,3 +179,48 @@ def cancel(order_id):
     db.commit()
     flash("Your order has been cancelled." + (" Your payment will be refunded." if pay == "Refunded" else ""), "success")
     return redirect(url_for("orders.detail", order_id=order_id))
+
+
+@bp.route("/orders/<int:order_id>/return", methods=["GET", "POST"])
+@login_required
+def request_return(order_id):
+    o = _get_order(order_id)
+    if o["user_id"] != g.user["id"]:
+        abort(403)
+    ret, eligible = _return_state(o)
+    if not eligible:
+        flash("This order isn't eligible for a return. Returns are accepted within "
+              f"{RETURN_WINDOW_DAYS} days of delivery, once per order.", "error")
+        return redirect(url_for("orders.detail", order_id=order_id))
+    if request.method == "POST":
+        reason = request.form.get("reason", "")
+        details = request.form.get("details", "").strip()[:1000]
+        if reason not in RETURN_REASONS:
+            flash("Please choose a reason for the return.", "error")
+        else:
+            db = get_db()
+            db.execute("INSERT INTO returns (order_id, user_id, reason, details) VALUES (?,?,?,?)",
+                       (order_id, g.user["id"], reason, details))
+            add_event(order_id, "Return requested", reason)
+            db.commit()
+            flash("Your return request has been sent. We'll update you within two working days.", "success")
+            return redirect(url_for("orders.detail", order_id=order_id))
+    items = query("SELECT * FROM order_items WHERE order_id=?", (order_id,))
+    return render_template("return_form.html", o=o, items=items, reasons=RETURN_REASONS)
+
+
+@bp.route("/orders/<int:order_id>/reorder", methods=["POST"])
+@login_required
+def reorder(order_id):
+    o = _get_order(order_id)
+    added = skipped = 0
+    for it in query("SELECT book_id, qty FROM order_items WHERE order_id=?", (o["id"],)):
+        stock = query("SELECT stock FROM books WHERE id=?", (it["book_id"],), one=True) if it["book_id"] else None
+        if stock and stock["stock"] > 0:
+            cart_set(it["book_id"], it["qty"])
+            added += 1
+        else:
+            skipped += 1
+    flash(f"Added {added} {'book' if added == 1 else 'books'} to your cart."
+          + (f" {skipped} unavailable." if skipped else ""), "success" if added else "error")
+    return redirect(url_for("cart.view"))

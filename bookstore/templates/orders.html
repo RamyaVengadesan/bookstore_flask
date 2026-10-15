@@ -1,14 +1,19 @@
 {% extends 'base.html' %}
 {% from 'partials/macros.html' import cover, badge %}
-{% block title %}Your orders · PU Book Store{% endblock %}
+{% block title %}Your orders · {{ brand.name }}{% endblock %}
 {% block content %}
 <h1>Your orders</h1>
+<div class="tabs" role="navigation" aria-label="Filter orders">
+  {% for key, label in [('all','All orders'),('active','In progress'),('delivered','Delivered'),('cancelled','Cancelled')] %}
+    <a class="tab-link {{ 'on' if status == key }}" href="{{ url_for('orders.history', status=key) }}">{{ label }}</a>
+  {% endfor %}
+</div>
 {% if not orders %}
-  <div class="empty"><h2>No orders yet</h2><p class="muted">Once you place an order you can track it here.</p><a class="btn" href="{{ url_for('shop.catalogue') }}">Find a book</a></div>
+  <div class="empty"><h2>{{ 'No orders yet' if status == 'all' else 'No orders here' }}</h2><p class="muted">{{ 'Once you place an order you can track it here.' if status == 'all' else 'Try another filter to see your other orders.' }}</p><a class="btn" href="{{ url_for('shop.catalogue') }}">Find a book</a></div>
 {% else %}
   {% for o in orders %}
   <div class="panel order-card">
-    <div class="thumbs">{% for p in previews[o.id] %}<div class="cover sm cc{{ loop.index % 6 }}">{% if p.image %}<img src="{{ p.image }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>{% endfor %}</div>
+    <div class="thumbs">{% for p in previews[o.id] %}<div class="cover sm cc{{ loop.index % 6 }}">{% set u = cover_url(p.image, p.isbn, 'S') %}{% if u %}<img src="{{ u }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>{% endfor %}</div>
     <div>
       <b>{{ order_ref(o.id) }}</b> {{ badge(o.status) }}
       <div class="small muted">{{ o.created_at|dt }} · {{ o.n_items }} {{ 'item' if o.n_items == 1 else 'items' }} · {{ o.total|money }}</div>

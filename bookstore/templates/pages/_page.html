@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} · {{ brand.name }}{% endblock %}
+{% block content %}
+<div class="info-layout">
+  <aside class="info-nav" aria-label="Help topics">
+    <h3>Help centre</h3>
+    {% for slug, label in [('about','About us'),('faq','Help and FAQ'),('shipping','Shipping and delivery'),('returns-policy','Returns and refunds'),('privacy','Privacy policy'),('terms','Terms of use')] %}
+      <a href="{{ url_for('shop.info', slug=slug) }}" class="{{ 'active' if request.path.endswith('/' ~ slug) }}">{{ label }}</a>
+    {% endfor %}
+    <a href="{{ url_for('shop.contact') }}" class="{{ 'active' if request.path == '/contact' }}">Contact us</a>
+  </aside>
+  <article class="info-body">
+    {% block body %}{% endblock %}
+    <p class="small muted demo-note">{{ brand.name }} is a demonstration store built as a learning project. This page describes how the demo behaves.</p>
+  </article>
+</div>
+{% endblock %}

@@ -1,8 +1,7 @@
-{% extends 'base.html' %}
-{% from 'partials/macros.html' import admin_nav, csrf %}
-{% block title %}Coupons · Admin{% endblock %}
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf %}
+{% block title %}Coupons{% endblock %}
 {% block content %}
-<h1>Coupons</h1>{{ admin_nav('coupons') }}
 <form method="post" class="panel" style="margin-bottom:18px">{{ csrf() }}
   <h3>New coupon</h3>
   <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr))">
@@ -15,8 +14,8 @@
   <button class="btn">Create coupon</button>
 </form>
 <div class="table-wrap"><table class="data">
-  <thead><tr><th>Code</th><th>Discount</th><th>Minimum cart</th><th>Cap</th><th>Expires</th><th>Status</th><th></th></tr></thead>
-  <tbody>{% for c in coupons %}<tr><td><b>{{ c.code }}</b></td><td>{{ c.percent }}%</td><td>{{ c.min_amount|money }}</td><td>{{ c.max_discount|money if c.max_discount else 'None' }}</td><td>{{ c.expires_on or 'Never' }}</td>
+  <thead><tr><th>Code</th><th>Discount</th><th>Minimum cart</th><th>Cap</th><th>Expires</th><th class="num">Used</th><th>Status</th><th></th></tr></thead>
+  <tbody>{% for c in coupons %}<tr><td><b>{{ c.code }}</b></td><td>{{ c.percent }}%</td><td>{{ c.min_amount|money }}</td><td>{{ c.max_discount|money if c.max_discount else 'None' }}</td><td>{{ c.expires_on or 'Never' }}</td><td class="num">{{ c.used }}</td>
     <td>{{ 'Active' if c.active else 'Paused' }}</td>
     <td><div class="row-actions">
       <form method="post" action="{{ url_for('admin.coupon_toggle', cid=c.id) }}">{{ csrf() }}<button class="btn btn-ghost btn-sm">{{ 'Pause' if c.active else 'Activate' }}</button></form>

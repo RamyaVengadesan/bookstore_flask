@@ -1,0 +1,21 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf %}
+{% block title %}Banners{% endblock %}
+{% block actions %}<a class="btn btn-sm" href="{{ url_for('admin.banner_form') }}">Add a banner</a>{% endblock %}
+{% block content %}
+<p class="muted" style="margin-top:0">These are the slides at the top of the home page, shown in this order. Only active banners appear.</p>
+{% for b in rows %}
+<section class="panel banner-row {{ '' if b.active else 'off' }}">
+  <div class="bn-chip bn-{{ b.theme }}" aria-hidden="true"></div>
+  <div class="bn-info"><b>{{ b.title }}</b>{% if not b.active %} <span class="chip">Hidden</span>{% endif %}
+    <div class="small muted">{{ b.subtitle }}</div><div class="small">Button “{{ b.cta_text }}” → <code>{{ b.link }}</code>{% if b.category_slug %} · covers from {{ b.category_slug }}{% endif %}</div></div>
+  <div class="row-actions">
+    <form method="post" action="{{ url_for('admin.banner_action', bid=b.id, action='up') }}">{{ csrf() }}<button class="btn btn-ghost btn-sm" aria-label="Move up" {{ 'disabled' if loop.first }}>↑</button></form>
+    <form method="post" action="{{ url_for('admin.banner_action', bid=b.id, action='down') }}">{{ csrf() }}<button class="btn btn-ghost btn-sm" aria-label="Move down" {{ 'disabled' if loop.last }}>↓</button></form>
+    <form method="post" action="{{ url_for('admin.banner_action', bid=b.id, action='toggle') }}">{{ csrf() }}<button class="btn btn-ghost btn-sm">{{ 'Hide' if b.active else 'Show' }}</button></form>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.banner_form', bid=b.id) }}">Edit</a>
+    <form method="post" action="{{ url_for('admin.banner_action', bid=b.id, action='delete') }}" data-confirm="Delete this banner?">{{ csrf() }}<button class="btn btn-danger btn-sm">Delete</button></form>
+  </div>
+</section>
+{% else %}<div class="empty"><h2>No banners</h2><p class="muted">The home page will show no hero slides until you add one.</p></div>{% endfor %}
+{% endblock %}

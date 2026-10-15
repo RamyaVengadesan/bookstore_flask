@@ -1,0 +1,19 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf, stars, pagination %}
+{% block title %}Reviews{% endblock %}
+{% block content %}
+<form method="get" class="filterbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search book, customer or text" aria-label="Search reviews">
+  <select name="rating" data-autosubmit aria-label="Rating"><option value="">Any rating</option>{% for i in [5,4,3,2,1] %}<option value="{{ i }}" {{ 'selected' if rating == i }}>{{ i }} stars</option>{% endfor %}</select>
+  <button class="btn btn-sm">Filter</button><span class="muted small">{{ total }} review{{ 's' if total != 1 }}</span>
+</form>
+<div class="table-wrap"><table class="data">
+  <thead><tr><th>Book</th><th>Review</th><th>Customer</th><th class="num">Helpful</th><th></th></tr></thead>
+  <tbody>{% for r in rows %}
+    <tr><td style="max-width:200px"><a href="{{ url_for('shop.book', book_id=r.book_id) }}#reviews" target="_blank" rel="noopener">{{ r.book }}</a></td>
+      <td style="max-width:420px">{{ stars(r.rating) }}{% if r.title %} <b>{{ r.title }}</b>{% endif %}{% if r.comment %}<div class="small">{{ r.comment }}</div>{% endif %}</td>
+      <td>{{ r.fullname }}<div class="small muted">{{ r.created_at|dt('%d %b %Y') }}</div></td><td class="num">{{ r.votes }}</td>
+      <td><form method="post" action="{{ url_for('admin.review_delete', rid=r.id) }}" data-confirm="Remove this review?">{{ csrf() }}<button class="btn btn-danger btn-sm">Remove</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="muted">No reviews found.</td></tr>{% endfor %}</tbody></table></div>
+{{ pagination(page, pages, 'admin.reviews', base) }}
+{% endblock %}

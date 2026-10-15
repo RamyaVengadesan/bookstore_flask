@@ -1,0 +1,12 @@
+{% extends 'pages/_page.html' %}
+{% block body %}
+<h1>Privacy policy</h1>
+<h2>What we collect</h2>
+<p>Your name, email address, phone number and delivery addresses when you create an account or place an order, together with your order history, wishlist and reviews. We do not collect card or UPI details in this demo.</p>
+<h2>How we use it</h2>
+<p>To process and deliver orders, send order updates, answer your messages and keep your account secure. If you subscribe to the newsletter we use your email to send new arrivals and offers, and you can unsubscribe at any time.</p>
+<h2>How we protect it</h2>
+<p>Passwords are stored as one-way hashes, never in plain text. Account pages and order details are only visible to you and to store staff who need them to fulfil your order.</p>
+<h2>Your choices</h2>
+<p>You can update your details from <a href="{{ url_for('auth.account') }}">My account</a>, or <a href="{{ url_for('shop.contact') }}">contact us</a> to ask for your data to be corrected or removed.</p>
+{% endblock %}

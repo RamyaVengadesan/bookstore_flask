@@ -1,31 +1,55 @@
-{% extends 'base.html' %}
-{% from 'partials/macros.html' import admin_nav, badge %}
-{% block title %}Admin · PU Book Store{% endblock %}
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import badge, icon %}
+{% from 'admin/_m.html' import bars, delta %}
+{% block title %}Dashboard{% endblock %}
+{% block actions %}
+<div class="seg" role="group" aria-label="Period">{% for d in (7, 30, 90) %}<a href="{{ url_for('admin.dashboard', days=d) }}" class="{{ 'on' if days == d }}">{{ d }} days</a>{% endfor %}</div>
+{% endblock %}
 {% block content %}
-<h1>Admin</h1>
-{{ admin_nav('dash') }}
+{% if queue.pending or queue.returns or queue.messages or queue.low or queue.out %}
+<section class="queue" aria-label="Needs attention">
+  {% if queue.pending %}<a href="{{ url_for('admin.orders', status='Pending') }}"><b>{{ queue.pending }}</b> new order{{ 's' if queue.pending != 1 }} to confirm</a>{% endif %}
+  {% if queue.returns %}<a href="{{ url_for('admin.returns', status='Requested') }}"><b>{{ queue.returns }}</b> return request{{ 's' if queue.returns != 1 }}</a>{% endif %}
+  {% if queue.messages %}<a href="{{ url_for('admin.messages', status='New') }}"><b>{{ queue.messages }}</b> unread message{{ 's' if queue.messages != 1 }}</a>{% endif %}
+  {% if queue.low %}<a href="{{ url_for('admin.books', show='low') }}"><b>{{ queue.low }}</b> low on stock</a>{% endif %}
+  {% if queue.out %}<a href="{{ url_for('admin.books', show='out') }}"><b>{{ queue.out }}</b> sold out</a>{% endif %}
+</section>
+{% endif %}
+
 <div class="kpis">
-  <div class="kpi"><div class="v">{{ totals.revenue|money }}</div><div class="l">Revenue (excluding cancelled)</div></div>
-  <div class="kpi"><div class="v">{{ totals.orders }}</div><div class="l">Orders</div></div>
-  <div class="kpi"><div class="v">{{ pending }}</div><div class="l">Waiting to ship</div></div>
-  <div class="kpi"><div class="v">{{ users }}</div><div class="l">Customers</div></div>
-  <div class="kpi"><div class="v">{{ books.n }}</div><div class="l">Titles · {{ books.copies }} copies</div></div>
+  <div class="kpi"><div class="l">Revenue · {{ days }} days</div><div class="v">{{ revenue|money }}</div>{{ delta(rev_delta) }}</div>
+  <div class="kpi"><div class="l">Orders</div><div class="v">{{ orders_n }}</div>{{ delta(ord_delta) }}</div>
+  <div class="kpi"><div class="l">Average order value</div><div class="v">{{ aov|round|int|money }}</div><span class="delta">excludes cancelled</span></div>
+  <div class="kpi"><div class="l">New customers</div><div class="v">{{ new_users }}</div><span class="delta">{{ users }} in total</span></div>
 </div>
-<div class="admin-grid">
-  <section class="panel"><h3>Revenue, last 7 days</h3>
-    <div class="chart">{% for c in chart %}
-      <div class="col" title="{{ c.n }} orders"><b>{{ c.revenue|money if c.revenue else '' }}</b><i style="height: {{ (c.revenue / peak * 100)|round|int }}%"></i><span>{{ c.label }}</span></div>
-    {% endfor %}</div></section>
-  <section class="panel"><h3>Low stock</h3>
-    {% for b in low_stock %}<div class="sum-row"><a href="{{ url_for('admin.book_edit', book_id=b.id) }}">{{ b.name }}</a><b class="{{ 'stock out' if b.stock == 0 else 'stock low' }}">{{ b.stock }} left</b></div>
-    {% else %}<p class="muted">Everything is well stocked.</p>{% endfor %}</section>
+
+<div class="adm-grid">
+  <section class="panel"><div class="panel-head"><h3>Revenue per day</h3><a class="small" href="{{ url_for('admin.reports') }}">Full report</a></div>{{ bars(chart) }}</section>
+  <section class="panel"><h3>Orders by status</h3>
+    <div class="stackbar" role="img" aria-label="Orders by status">{% for s in flow %}{% if statuses.get(s) %}<i class="seg-{{ s|lower|replace(' ','-') }}" style="width: {{ (statuses[s] / status_total * 100)|round(1) }}%" title="{{ s }}: {{ statuses[s] }}"></i>{% endif %}{% endfor %}</div>
+    <ul class="legend">{% for s in flow %}<li><i class="seg-{{ s|lower|replace(' ','-') }}"></i><a href="{{ url_for('admin.orders', status=s) }}">{{ s }}</a><b>{{ statuses.get(s, 0) }}</b></li>{% endfor %}</ul>
+  </section>
 </div>
-<div class="admin-grid">
-  <section class="panel"><h3>Recent orders</h3>
-    {% if recent %}<div class="table-wrap" style="border:0"><table class="data"><tbody>
+
+<div class="adm-grid even">
+  <section class="panel"><h3>Sales by department</h3>
+    {% for c in by_cat %}<div class="hbar"><span>{{ c.dept }}</span><div><i style="width: {{ (c.revenue / cat_peak * 100)|round }}%"></i></div><b>{{ c.revenue|money }}</b></div>
+    {% else %}<p class="muted">No sales in this period.</p>{% endfor %}</section>
+  <section class="panel"><h3>Top sellers</h3>
+    {% for t in top %}<div class="sum-row"><span>{{ loop.index }}. {{ t.title }}</span><b>{{ t.sold }} sold</b></div>{% else %}<p class="muted">Sales will show up here.</p>{% endfor %}</section>
+</div>
+
+<div class="adm-grid even">
+  <section class="panel"><div class="panel-head"><h3>Recent orders</h3><a class="small" href="{{ url_for('admin.orders') }}">All orders</a></div>
+    {% if recent %}<div class="table-wrap flat"><table class="data"><tbody>
       {% for o in recent %}<tr><td><a href="{{ url_for('admin.order', order_id=o.id) }}">{{ order_ref(o.id) }}</a></td><td>{{ o.fullname }}</td><td>{{ badge(o.status) }}</td><td class="num">{{ o.total|money }}</td></tr>{% endfor %}
     </tbody></table></div>{% else %}<p class="muted">No orders yet.</p>{% endif %}</section>
-  <section class="panel"><h3>Top sellers</h3>
-    {% for t in top %}<div class="sum-row"><span>{{ t.title }}</span><b>{{ t.sold }} sold</b></div>{% else %}<p class="muted">Sales will show up here.</p>{% endfor %}</section>
+  <section class="panel"><div class="panel-head"><h3>Low stock</h3><a class="small" href="{{ url_for('admin.books', show='low') }}">See all</a></div>
+    {% for b in low_stock %}<div class="sum-row"><a href="{{ url_for('admin.book_edit', book_id=b.id) }}">{{ b.name }}</a><b class="{{ 'stock out' if b.stock == 0 else 'stock low' }}">{{ 'Sold out' if b.stock == 0 else b.stock ~ ' left' }}</b></div>
+    {% else %}<p class="muted">Everything is well stocked.</p>{% endfor %}</section>
 </div>
+
+<section class="panel"><div class="panel-head"><h3>Recent admin activity</h3><a class="small" href="{{ url_for('admin.activity') }}">Activity log</a></div>
+  {% for a in activity %}<div class="act-row"><b>{{ a.action }}</b><span class="muted">{{ a.detail }}</span><span class="small muted">{{ a.username or 'system' }} · {{ a.created_at|dt('%d %b, %I:%M %p') }}</span></div>
+  {% else %}<p class="muted">Changes you make in the console will be listed here.</p>{% endfor %}</section>
 {% endblock %}

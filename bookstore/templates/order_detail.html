@@ -1,11 +1,13 @@
 {% extends 'base.html' %}
 {% from 'partials/macros.html' import csrf, cover, badge %}
-{% block title %}Order {{ order_ref(o.id) }} · PU Book Store{% endblock %}
+{% block title %}Order {{ order_ref(o.id) }} · {{ brand.name }}{% endblock %}
 {% block content %}
 <div class="page-head">
   <div><h1>Order {{ order_ref(o.id) }}</h1><span class="muted">Placed {{ o.created_at|dt }}</span></div>
   <div class="no-print row-actions">
     <a class="btn btn-ghost btn-sm" href="{{ url_for('orders.invoice', order_id=o.id) }}" target="_blank" rel="noopener">View invoice</a>
+    {% if o.user_id == g.user.id %}<form method="post" action="{{ url_for('orders.reorder', order_id=o.id) }}">{{ csrf() }}<button class="btn btn-ghost btn-sm">Buy again</button></form>{% endif %}
+    {% if can_return %}<a class="btn btn-ghost btn-sm" href="{{ url_for('orders.request_return', order_id=o.id) }}">Request a return</a>{% endif %}
     {% if can_cancel and o.user_id == g.user.id %}
     <form method="post" action="{{ url_for('orders.cancel', order_id=o.id) }}" data-confirm="Cancel this order?">{{ csrf() }}<button class="btn btn-danger btn-sm">Cancel order</button></form>{% endif %}
   </div>
@@ -17,6 +19,13 @@
   {% else %}
     {% set cur = flow.index(o.status) %}
     <ol class="timeline">{% for s in flow %}<li class="{{ 'done' if loop.index0 <= cur }} {{ 'now' if loop.index0 == cur }}">{{ s }}</li>{% endfor %}</ol>
+    {% if eta %}<p class="eta">Estimated delivery by <b>{{ eta.label }}</b></p>{% endif %}
+  {% endif %}
+  {% if ret %}
+    <div class="return-box"><b>Return {{ ret.status|lower }}</b> <span class="muted small">Requested {{ ret.created_at|dt('%d %b %Y') }} · {{ ret.reason }}</span>
+      {% if ret.admin_note %}<p class="small" style="margin:6px 0 0">Note from us: {{ ret.admin_note }}</p>{% endif %}</div>
+  {% elif o.status == 'Delivered' and not can_return %}
+    <p class="small muted" style="margin:10px 0 0">The {{ return_days }}-day return window for this order has closed.</p>
   {% endif %}
 </section>
 
@@ -25,7 +34,7 @@
     <h3>Items</h3>
     {% for i in items %}
     <div class="line">
-      <div class="cover cc{{ loop.index % 6 }}">{% if i.image %}<img src="{{ i.image }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>
+      <div class="cover cc{{ loop.index % 6 }}">{% set u = cover_url(i.image, i.isbn, 'M') %}{% if u %}<img src="{{ u }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</div>
       <div>{% if i.book_id %}<a class="line-title" href="{{ url_for('shop.book', book_id=i.book_id) }}">{{ i.title }}</a>{% else %}<span class="line-title">{{ i.title }}</span>{% endif %}
         <div class="small muted">{{ i.author }} · {{ i.price|money }} × {{ i.qty }}</div></div>
       <div class="line-total">{{ (i.price * i.qty)|money }}</div>

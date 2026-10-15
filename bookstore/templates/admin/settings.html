@@ -1,0 +1,24 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<form method="post" class="panel" style="max-width:720px">
+  {{ csrf() }}
+  <h3>Storefront</h3>
+  <div class="grid-2">
+    <div class="field"><label for="store_name">Store name</label><input id="store_name" name="store_name" maxlength="40" value="{{ s.store_name }}" placeholder="{{ cfg.STORE_NAME }}"><div class="hint">Leave empty to use “{{ cfg.STORE_NAME }}”.</div></div>
+    <div class="field"><label for="tagline">Tagline</label><input id="tagline" name="tagline" maxlength="80" value="{{ s.tagline }}" placeholder="{{ cfg.STORE_TAGLINE }}"></div>
+  </div>
+  <div class="field"><label for="announcement">Announcement in the top bar</label><input id="announcement" name="announcement" maxlength="140" value="{{ s.announcement }}"><div class="hint">Shown after “Free delivery above …”. Leave empty to hide.</div></div>
+  <h3 style="margin-top:22px">Delivery and stock</h3>
+  <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr))">
+    <div class="field"><label for="free_above">Free delivery above (₹)</label><input id="free_above" name="free_above" type="number" min="0" step="1" value="{{ s.free_above }}" required></div>
+    <div class="field"><label for="ship_fee">Delivery fee (₹)</label><input id="ship_fee" name="ship_fee" type="number" min="0" step="1" value="{{ s.ship_fee }}" required></div>
+    <div class="field"><label for="low_stock">Low-stock level</label><input id="low_stock" name="low_stock" type="number" min="0" step="1" value="{{ s.low_stock }}" required><div class="hint">At or below this, a book is flagged.</div></div>
+  </div>
+  <div class="field"><label for="support_email">Support email</label><input id="support_email" name="support_email" type="email" value="{{ s.support_email }}"></div>
+  <button class="btn">Save settings</button>
+</form>
+<div class="panel" style="max-width:720px;margin-top:18px"><h3>Set outside the console</h3>
+  <p class="small muted" style="margin:0">Order number prefix ({{ cfg.ORDER_PREFIX }}), the secret key, mail server and the admin password are configured with environment variables. See the README.</p></div>
+{% endblock %}

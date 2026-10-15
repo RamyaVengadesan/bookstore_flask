@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% from 'partials/macros.html' import book_card %}
-{% block title %}Wishlist · PU Book Store{% endblock %}
+{% block title %}Wishlist · {{ brand.name }}{% endblock %}
 {% block content %}
 <h1>Your wishlist</h1>
 {% if books %}<div class="grid" data-wishlist-page>{% for b in books %}{{ book_card(b, wished) }}{% endfor %}</div>

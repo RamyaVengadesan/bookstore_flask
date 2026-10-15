@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import csrf %}
+{% block title %}Request a return · {{ brand.name }}{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="{{ url_for('orders.history') }}">Orders</a> / <a href="{{ url_for('orders.detail', order_id=o.id) }}">{{ order_ref(o.id) }}</a> / Return</nav>
+<h1>Request a return</h1>
+<div class="two-col">
+  <form method="post" class="panel" novalidate>
+    {{ csrf() }}
+    <h2>What went wrong?</h2>
+    {% for r in reasons %}<label class="choice"><input type="radio" name="reason" value="{{ r }}" required><span><b>{{ r }}</b></span></label>{% endfor %}
+    <div class="field" style="margin-top:14px"><label for="details">Tell us more (optional)</label><textarea id="details" name="details" maxlength="1000" placeholder="e.g. The cover is torn and pages 40 to 60 are missing."></textarea></div>
+    <button class="btn">Submit return request</button>
+    <a class="btn btn-ghost" href="{{ url_for('orders.detail', order_id=o.id) }}">Cancel</a>
+  </form>
+  <aside class="panel"><h3>Items in this order</h3>
+    {% for i in items %}<div class="sum-row"><span>{{ i.title }} <span class="muted">× {{ i.qty }}</span></span><span>{{ (i.price * i.qty)|money }}</span></div>{% endfor %}
+    <p class="small muted" style="margin:12px 0 0">Returns apply to the whole order. Refunds go back to your original payment method after we receive and check the books.</p>
+  </aside>
+</div>
+{% endblock %}

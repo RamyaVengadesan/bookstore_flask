@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% from 'partials/macros.html' import csrf %}
+{% block title %}Choose a new password · {{ brand.name }}{% endblock %}
+{% block content %}
+<div class="auth"><div class="panel">
+  <h1>Choose a new password</h1>
+  <form method="post" novalidate>
+    {{ csrf() }}
+    <div class="field"><label for="password">New password</label><input id="password" name="password" type="password" required minlength="8" autocomplete="new-password" autofocus><div class="hint">At least 8 characters with letters and numbers.</div></div>
+    <div class="field"><label for="confirm">Confirm new password</label><input id="confirm" name="confirm" type="password" required autocomplete="new-password"></div>
+    <button class="btn btn-block">Change password</button>
+  </form>
+</div></div>
+{% endblock %}

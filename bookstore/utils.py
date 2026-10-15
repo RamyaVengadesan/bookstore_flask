@@ -1,5 +1,8 @@
 """Shared helpers: auth decorators, CSRF, cart + pricing logic, formatting."""
+import re
 import secrets
+import smtplib
+from email.message import EmailMessage
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from urllib.parse import urlparse
@@ -8,8 +11,6 @@ from flask import abort, current_app, flash, g, jsonify, redirect, request, sess
 
 from .db import execute, get_db, query
 
-FREE_SHIPPING_ABOVE = 500
-SHIPPING_FEE = 40
 MAX_QTY_PER_BOOK = 10
 ORDER_FLOW = ["Pending", "Confirmed", "Shipped", "Out for Delivery", "Delivered"]
 CANCELLABLE = ("Pending", "Confirmed")
@@ -96,7 +97,31 @@ def local_dt(value, fmt="%d %b %Y, %I:%M %p"):
 
 
 def order_ref(order_id):
-    return f"PU-{int(order_id):06d}"
+    return f"{current_app.config['ORDER_PREFIX']}-{int(order_id):06d}"
+
+
+RETURN_WINDOW_DAYS = 7
+
+
+def delivery_info(pincode, start=None):
+    """Demo delivery estimate from a PIN code (2-5 working days, never on a Sunday)."""
+    pin = (pincode or "").strip()
+    if not re.fullmatch(r"[1-9]\d{5}", pin):
+        return None
+    days = 2 + (int(pin[0]) * 7) % 4
+    d = (start or date.today()) + timedelta(days=days)
+    while d.weekday() == 6:
+        d += timedelta(days=1)
+    return {"pincode": pin, "days": days, "date": d, "label": d.strftime("%a, %d %b")}
+
+
+def cover_url(image, isbn, size="M"):
+    """Cover for a book: an uploaded/explicit image, else Open Library by ISBN (404s if unknown)."""
+    if image:
+        return image
+    if isbn:
+        return f"https://covers.openlibrary.org/b/isbn/{isbn.replace('-', '')}-{size}.jpg?default=false"
+    return None
 
 
 # ---------------------------------------------------------------- cart
@@ -219,11 +244,12 @@ def compute_totals(items):
         else:
             session.pop("coupon", None)
     after = subtotal - discount
-    shipping = 0 if (after >= FREE_SHIPPING_ABOVE or subtotal == 0) else SHIPPING_FEE
+    free_above, fee = shipping_rules()
+    shipping = 0 if (after >= free_above or subtotal == 0) else fee
     return {
         "subtotal": subtotal, "discount": discount, "coupon": coupon,
         "shipping": shipping, "total": after + shipping,
-        "free_ship_gap": max(0, FREE_SHIPPING_ABOVE - after) if subtotal else 0,
+        "free_ship_gap": max(0, free_above - after) if subtotal else 0,
     }
 
 
@@ -246,3 +272,83 @@ def recalc_rating(book_id):
         execute("UPDATE books SET rating=?, review_count=? WHERE id=?", (round(row["a"], 1), row["n"], book_id))
     else:
         execute("UPDATE books SET review_count=0 WHERE id=?", (book_id,))
+
+
+# ---------------------------------------------------------------- email
+def send_email(to, subject, body):
+    """Send an email. Without MAIL_SERVER configured, the message is printed to the server console
+    (and kept in app.config['OUTBOX'] for tests), which is what you want while developing."""
+    cfg = current_app.config
+    cfg.setdefault("OUTBOX", []).append({"to": to, "subject": subject, "body": body})
+    server = cfg.get("MAIL_SERVER")
+    if not server:
+        current_app.logger.info("EMAIL to %s | %s\n%s", to, subject, body)
+        return True
+    msg = EmailMessage()
+    msg["From"], msg["To"], msg["Subject"] = cfg.get("MAIL_FROM") or cfg.get("MAIL_USERNAME"), to, subject
+    msg.set_content(body)
+    try:
+        with smtplib.SMTP(server, cfg.get("MAIL_PORT", 587), timeout=10) as smtp:
+            smtp.starttls()
+            if cfg.get("MAIL_USERNAME"):
+                smtp.login(cfg["MAIL_USERNAME"], cfg.get("MAIL_PASSWORD", ""))
+            smtp.send_message(msg)
+        return True
+    except Exception:                       # never let a mail problem break an order
+        current_app.logger.exception("Could not send email to %s", to)
+        return False
+
+
+# ---------------------------------------------------------------- store settings (editable in the admin console)
+SETTING_DEFAULTS = {
+    "store_name": "", "tagline": "", "announcement": "Use code WELCOME10 for 10% off your first order",
+    "free_above": "500", "ship_fee": "40", "low_stock": "5", "support_email": "support@readora.local",
+}
+
+
+def all_settings():
+    if "_settings" not in g:
+        saved = {r["key"]: r["value"] for r in query("SELECT key, value FROM settings")}
+        g._settings = {**SETTING_DEFAULTS, **saved}
+    return g._settings
+
+
+def setting_num(key, fallback):
+    try:
+        return float(all_settings().get(key))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def shipping_rules():
+    return setting_num("free_above", 500), setting_num("ship_fee", 40)
+
+
+def save_settings(values):
+    db = get_db()
+    for k, v in values.items():
+        db.execute("INSERT INTO settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (k, v))
+    db.commit()
+    g.pop("_settings", None)
+
+
+def log_admin(action, detail=None):
+    """Append to the admin activity log (who did what)."""
+    uid = g.user["id"] if g.get("user") else None
+    execute("INSERT INTO admin_log (user_id, action, detail) VALUES (?,?,?)", (uid, action, (detail or "")[:300]))
+
+
+def local_today():
+    tz = timezone(timedelta(minutes=current_app.config["TZ_OFFSET_MINUTES"]))
+    return datetime.now(timezone.utc).astimezone(tz).date()
+
+
+def make_reset_token(user_id):
+    """Create a one-hour password-reset token (same table the Forgot password page uses)."""
+    import hashlib
+    token = secrets.token_urlsafe(32)
+    exp = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+    execute("UPDATE password_resets SET used=1 WHERE user_id=?", (user_id,))
+    execute("INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?,?,?)",
+            (user_id, hashlib.sha256(token.encode()).hexdigest(), exp))
+    return token

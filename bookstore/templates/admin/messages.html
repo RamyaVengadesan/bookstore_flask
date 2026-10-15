@@ -1,0 +1,21 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf, badge %}
+{% block title %}Inbox{% endblock %}
+{% block content %}
+<div class="adm-tabs">
+  <a href="{{ url_for('admin.messages') }}" class="{{ 'on' if not status }}">All <em>{{ counts.values()|sum }}</em></a>
+  <a href="{{ url_for('admin.messages', status='New') }}" class="{{ 'on' if status == 'New' }}">New <em>{{ counts.get('New', 0) }}</em></a>
+  <a href="{{ url_for('admin.messages', status='Resolved') }}" class="{{ 'on' if status == 'Resolved' }}">Resolved <em>{{ counts.get('Resolved', 0) }}</em></a>
+</div>
+{% for m in rows %}
+<section class="panel msg {{ 'unread' if m.status == 'New' }}">
+  <div class="ret-head"><div><b>{{ m.subject }}</b><div class="small muted">{{ m.name }} · <a href="mailto:{{ m.email }}?subject=Re: {{ m.subject|urlencode }}">{{ m.email }}</a> · {{ m.created_at|dt('%d %b, %I:%M %p') }}</div></div>{{ badge(m.status) }}</div>
+  <p style="margin:10px 0 12px;white-space:pre-wrap">{{ m.body }}</p>
+  <div class="row-actions">
+    <a class="btn btn-sm" href="mailto:{{ m.email }}?subject=Re: {{ m.subject|urlencode }}">Reply by email</a>
+    <form method="post" action="{{ url_for('admin.message_toggle', mid=m.id) }}">{{ csrf() }}<button class="btn btn-ghost btn-sm">{{ 'Mark resolved' if m.status == 'New' else 'Reopen' }}</button></form>
+    <form method="post" action="{{ url_for('admin.message_delete', mid=m.id) }}" data-confirm="Delete this message?">{{ csrf() }}<button class="btn btn-danger btn-sm">Delete</button></form>
+  </div>
+</section>
+{% else %}<div class="empty"><h2>Inbox is empty</h2><p class="muted">Messages from the Contact page land here.</p></div>{% endfor %}
+{% endblock %}

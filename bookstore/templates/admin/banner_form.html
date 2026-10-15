@@ -1,0 +1,20 @@
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import csrf %}
+{% block title %}{{ 'Edit banner' if editing else 'New banner' }}{% endblock %}
+{% block content %}
+<form method="post" class="panel" style="max-width:680px">
+  {{ csrf() }}
+  <div class="field"><label for="title">Headline</label><input id="title" name="title" maxlength="120" value="{{ b.title or '' }}" required></div>
+  <div class="field"><label for="subtitle">Supporting text</label><textarea id="subtitle" name="subtitle" maxlength="220" style="min-height:70px">{{ b.subtitle or '' }}</textarea></div>
+  <div class="grid-2">
+    <div class="field"><label for="cta_text">Button text</label><input id="cta_text" name="cta_text" maxlength="30" value="{{ b.cta_text or 'Shop now' }}"></div>
+    <div class="field"><label for="link">Button link</label><input id="link" name="link" value="{{ b.link or '/books' }}" placeholder="/books?category=exams" required><div class="hint">A store path starting with / or a full https:// link.</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="field"><label>Colour</label><div class="theme-pick">{% for t in themes %}<label class="theme-opt"><input type="radio" name="theme" value="{{ t }}" {{ 'checked' if b.theme == t }}><span class="bn-chip bn-{{ t }}"></span>{{ t|title }}</label>{% endfor %}</div></div>
+    <div class="field"><label for="category_slug">Show covers from</label><select id="category_slug" name="category_slug"><option value="">Nothing</option>{% for c in cats %}<option value="{{ c.slug }}" {{ 'selected' if b.category_slug == c.slug }}>{{ c.name }}</option>{% endfor %}</select></div>
+  </div>
+  <label class="check" style="margin-bottom:16px"><input type="checkbox" name="active" value="1" {{ 'checked' if b.active }}> Show on the home page</label>
+  <div class="row-actions"><button class="btn">Save banner</button><a class="btn btn-ghost" href="{{ url_for('admin.banners') }}">Cancel</a></div>
+</form>
+{% endblock %}

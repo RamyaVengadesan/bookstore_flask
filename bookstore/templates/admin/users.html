@@ -1,10 +1,17 @@
-{% extends 'base.html' %}
-{% from 'partials/macros.html' import admin_nav %}
-{% block title %}Customers · Admin{% endblock %}
+{% extends 'admin/layout.html' %}
+{% from 'partials/macros.html' import pagination, icon %}
+{% block title %}Customers{% endblock %}
+{% block actions %}<a class="btn btn-ghost btn-sm" href="{{ url_for('admin.export', kind='customers') }}">{{ icon('download', 15) }} Export CSV</a>{% endblock %}
 {% block content %}
-<h1>Customers</h1>{{ admin_nav('users') }}
+<form method="get" class="filterbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Name, username or email" aria-label="Search customers">
+  <select name="sort" data-autosubmit aria-label="Sort"><option value="new" {{ 'selected' if sort == 'new' }}>Newest</option><option value="spent" {{ 'selected' if sort == 'spent' }}>Top spenders</option><option value="orders" {{ 'selected' if sort == 'orders' }}>Most orders</option></select>
+  <button class="btn btn-sm">Search</button><span class="muted small">{{ total }} account{{ 's' if total != 1 }}</span>
+</form>
 <div class="table-wrap"><table class="data">
-  <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Joined</th><th class="num">Orders</th><th class="num">Spent</th></tr></thead>
-  <tbody>{% for u in users %}<tr><td><b>{{ u.fullname }}</b> {% if u.is_admin %}<span class="chip">Admin</span>{% endif %}</td><td>@{{ u.username }}</td><td>{{ u.email }}</td><td>{{ u.created_at|dt('%d %b %Y') }}</td><td class="num">{{ u.orders }}</td><td class="num">{{ u.spent|money }}</td></tr>{% endfor %}</tbody>
-</table></div>
+  <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Last order</th><th class="num">Orders</th><th class="num">Spent</th></tr></thead>
+  <tbody>{% for u in users %}<tr><td><a href="{{ url_for('admin.user_detail', uid=u.id) }}"><b>{{ u.fullname }}</b></a> {% if u.is_admin %}<span class="chip">Admin</span>{% endif %}<div class="small muted">@{{ u.username }}</div></td>
+    <td>{{ u.email }}</td><td>{{ u.created_at|dt('%d %b %Y') }}</td><td>{{ u.last_order|dt('%d %b %Y') if u.last_order else '—' }}</td><td class="num">{{ u.orders }}</td><td class="num">{{ u.spent|money }}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">No customers match.</td></tr>{% endfor %}</tbody></table></div>
+{{ pagination(page, pages, 'admin.users', base) }}
 {% endblock %}
